@@ -208,6 +208,147 @@
       <p class="muted">${data.shared.length} downstream node(s) shared by both lines.</p></div>`;
   }
 
+  // ---------------------------------------------------------------- run page (agent trace + checks)
+  const PHASE_LABEL = { session: "session", propose: "propose", implement: "implement", execute: "execute",
+    score: "score", reflect: "reflect", decide: "decide", stop: "stop" };
+  const PHASE_ROLE = { propose: "researcher", implement: "coder", reflect: "analyst",
+    execute: "sandbox", score: "trusted scorer", decide: "evaluator rule", session: "controller", stop: "controller" };
+  const STEP_ICON = { ok: ["good", "✓"], failed: ["critical", "✕"], running: ["warning", "◔"], interrupted: ["", "⏸"], skipped: ["", "–"] };
+  const CHECK_ICON = { ok: ["good", "✓"], warn: ["warning", "!"], fail: ["critical", "✕"], info: ["", "i"] };
+  const dur = (s) => (s.started_at && s.finished_at ? `${(s.finished_at - s.started_at).toFixed(1)}s`
+    : s.status === "running" && s.started_at ? `${(Date.now() / 1000 - s.started_at).toFixed(0)}s…` : "");
+  const clock = (t) => (t ? new Date(t * 1000).toLocaleTimeString() : "");
+
+  // Line diff (LCS). Programs here are a few hundred lines, so O(n*m) is fine.
+  function lineDiff(a, b) {
+    const A = a.split("\n"), B = b.split("\n"), n = A.length, m = B.length;
+    const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+      L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = []; let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { out.push([" ", A[i]]); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) out.push(["-", A[i++]]);
+      else out.push(["+", B[j++]]);
+    }
+    while (i < n) out.push(["-", A[i++]]);
+    while (j < m) out.push(["+", B[j++]]);
+    return out;
+  }
+
+  function Code({ code, previous }) {
+    const [mode, setMode] = useState(previous ? "diff" : "full");
+    const rows = useMemo(() => (previous && mode === "diff" ? lineDiff(previous.code, code.code) : null), [code, previous, mode]);
+    return html`<div>
+      <div class="row" style=${{ alignItems: "center" }}>
+        <span class="muted">attempt ${code.attempt} · sha ${code.code_sha256.slice(0, 12)}${previous ? ` · repairs attempt ${previous.attempt}` : ""}</span>
+        ${previous ? html`<span style=${{ marginLeft: "auto" }}><button class=${mode === "diff" ? "on" : ""} onClick=${() => setMode("diff")}>Diff</button>
+          <button class=${mode === "full" ? "on" : ""} onClick=${() => setMode("full")}>Full</button></span>` : null}
+      </div>
+      ${code.explanation ? html`<p class="muted">${code.explanation}</p>` : null}
+      ${rows ? html`<pre class="diff">${rows.filter((r, k) => r[0] !== " " || rows.slice(Math.max(0, k - 2), k + 3).some((x) => x[0] !== " "))
+          .map(([t, line], k) => html`<div key=${k} class=${t === "+" ? "add" : t === "-" ? "del" : ""}>${t} ${line}</div>`)}</pre>`
+        : html`<pre>${code.code}</pre>`}
+    </div>`;
+  }
+
+  function StepDetail({ sel, step, onOpenGraph }) {
+    const [d, setD] = useState(null);
+    useEffect(() => { setD(null); if (step) api("step", { ...sel, id: step.id }).then(setD).catch(() => {}); }, [step && step.id, step && step.status]);
+    if (!step) return html`<p class="muted">Select a step to see exactly what the agent was given, what it produced, and what ran.</p>`;
+    const [cls, icon] = STEP_ICON[step.status] || ["", "●"];
+    const pretty = (txt) => { try { return JSON.stringify(JSON.parse(txt), null, 2); } catch (e) { return txt; } };
+    return html`<div>
+      <div class="muted">${PHASE_ROLE[step.phase] || ""} · ${step.origin}${step.worker !== null && step.worker !== undefined ? " · worker " + step.worker : ""} · ${when(step.finished_at || step.started_at)}</div>
+      <h2>${PHASE_LABEL[step.phase] || step.phase}${step.experiment_id ? ` · experiment #${step.experiment_id}` : ""}${step.attempt ? ` · attempt ${step.attempt}` : ""}</h2>
+      <div class="row"><span class=${"badge " + cls}>${icon} ${step.status}</span><span class="muted">${dur(step)}</span>
+        ${step.experiment_id ? html`<button style=${{ marginLeft: "auto" }} onClick=${() => onOpenGraph(step.experiment_id)}>Open in graph</button>` : null}</div>
+      ${step.hypothesis_title ? html`<p><b>Hypothesis:</b> ${step.hypothesis_title}</p>` : null}
+      ${step.summary ? html`<p>${step.summary}</p>` : null}
+      ${!d ? html`<p class="muted">Loading…</p>` : html`<div>
+        ${d.hypotheses.length ? html`<h3>Hypotheses proposed</h3>${d.hypotheses.map((h) => html`<details key=${h.id}><summary><b>${h.title}</b> <span class="muted">priority ${h.priority} · predicted ${h.expected_metric}</span></summary>
+            <p>${h.rationale}</p><p class="muted">${h.method}</p></details>`)}` : null}
+        ${d.code ? html`<h3>Program</h3><${Code} code=${d.code} previous=${d.previous_code} />` : null}
+        ${d.execution ? html`<h3>Execution</h3><div class="kv">
+            <div>exit code</div><div>${d.execution.exit_code === null ? "–" : d.execution.exit_code}${d.execution.timed_out ? " (timed out)" : ""}</div>
+            <div>duration</div><div>${fmt(d.execution.duration_s, 1)}s</div>
+            <div>image</div><div>${(d.execution.image_id || "").slice(0, 19)}</div></div>
+            <details><summary>docker command</summary><pre>${(JSON.parse(d.execution.command || "[]") || []).join(" ")}</pre></details>
+            <h3>stdout</h3><pre>${d.execution.stdout_tail || "(empty)"}</pre>
+            ${d.execution.stderr_tail ? html`<h3>stderr</h3><pre>${d.execution.stderr_tail}</pre>` : null}` : null}
+        ${d.llm_calls.length ? html`<h3>LLM calls (${d.llm_calls.length})</h3>${d.llm_calls.map((c) => html`<div key=${c.id} class="call">
+            <div class="row" style=${{ alignItems: "center" }}><b>${c.role}</b><span class="muted">${c.model} · ${c.input_tokens}/${c.output_tokens} tokens · $${fmt(c.cost_usd, 4)}</span>
+              ${c.error ? html`<span class="badge critical">✕ ${c.error.slice(0, 80)}</span>` : null}</div>
+            <details><summary>system prompt</summary><pre>${c.system}</pre></details>
+            <details><summary>prompt</summary><pre>${c.prompt}</pre></details>
+            <details open=${!c.error}><summary>response</summary><pre>${c.response ? pretty(c.response) : "(none)"}</pre></details></div>`)}` : null}
+        ${Object.keys(step.detail || {}).length ? html`<details><summary>step record</summary><pre>${JSON.stringify(step.detail, null, 2)}</pre></details>` : null}
+      </div>`}
+    </div>`;
+  }
+
+  function RunView({ sel, onOpenGraph }) {
+    const [tl, setTl] = useState(null);
+    const [checks, setChecks] = useState([]);
+    const [picked, setPicked] = useState(null);
+    const [phase, setPhase] = useState("");
+    const [exp, setExp] = useState("");
+    const [problems, setProblems] = useState(false);
+    const [err, setErr] = useState(null);
+    const load = useCallback(() => {
+      if (!sel) return;
+      api("steps", sel).then((t) => { setTl(t); setErr(null); }).catch((e) => setErr(e.message));
+      api("checks", sel).then(setChecks).catch(() => {});
+    }, [sel]);
+    useEffect(() => { setTl(null); setPicked(null); load(); }, [load]);
+    const live = tl && tl.state.label === "running";
+    useEffect(() => { if (!live) return; const t = setInterval(load, 3000); return () => clearInterval(t); }, [live, load]);
+    if (err) return html`<div class="err" style=${{ gridRow: "2 / 4" }}>${err}</div>`;
+    if (!tl) return html`<div class="muted" style=${{ gridRow: "2 / 4", padding: "12px" }}>Loading…</div>`;
+    const steps = tl.steps.filter((s) => (!phase || s.phase === phase) && (!exp || String(s.experiment_id) === exp)
+      && (!problems || ["failed", "interrupted"].includes(s.status)));
+    const exps = [...new Set(tl.steps.map((s) => s.experiment_id).filter((x) => x))].sort((a, b) => a - b);
+    const step = picked && tl.steps.find((s) => s.id === picked);
+    const s0 = tl.state;
+    const stateBadge = s0.label === "running" ? html`<span class="badge warning"><span class="pulse"></span> running · ${s0.running_steps} step(s) in progress</span>`
+      : html`<span class="badge">${s0.label}${s0.stop_reason ? " · " + s0.stop_reason : ""}</span>`;
+    const counts = { failed: tl.steps.filter((s) => s.status === "failed").length };
+    return html`<div class="runview">
+      <div class="runbar">
+        ${stateBadge}
+        <span class="muted">last activity ${s0.last_activity ? new Date(s0.last_activity * 1000).toLocaleString() : "–"}
+          ${tl.source === "reconstructed" ? " · trace reconstructed from records (run predates live step logging)" : ""}</span>
+        <span class="grow"></span>
+        <span class="lbl">phase</span><select value=${phase} onChange=${(e) => setPhase(e.target.value)}><option value="">all</option>
+          ${Object.keys(PHASE_LABEL).map((p) => html`<option key=${p} value=${p}>${p}</option>`)}</select>
+        <span class="lbl">experiment</span><select value=${exp} onChange=${(e) => setExp(e.target.value)}><option value="">all</option>
+          ${exps.map((x) => html`<option key=${x} value=${String(x)}>#${x}</option>`)}</select>
+        <button class=${problems ? "on" : ""} onClick=${() => setProblems(!problems)}>Problems only (${counts.failed})</button>
+        <button onClick=${load}>${live ? "Live ●" : "Refresh"}</button>
+      </div>
+      <div class="runmain">
+        <div class="timeline">
+          ${steps.map((s) => { const [cls, icon] = STEP_ICON[s.status] || ["", "●"]; return html`
+            <div key=${s.id} class=${"tstep " + (picked === s.id ? "sel " : "") + "ph-" + s.phase} onClick=${() => setPicked(s.id)}>
+              <span class=${"badge " + cls} title=${s.status}>${icon}</span>
+              <span class="tphase">${s.phase}</span>
+              <span class="texp">${s.experiment_id ? "#" + s.experiment_id + (s.attempt && s.phase !== "decide" ? "·" + s.attempt : "") : ""}</span>
+              <span class="tsum">${s.summary || s.hypothesis_title || ""}</span>
+              <span class="ttime">${dur(s)} ${clock(s.finished_at || s.started_at)}</span>
+            </div>`; })}
+          ${steps.length ? null : html`<p class="muted" style=${{ padding: "12px" }}>No steps match.</p>`}
+        </div>
+        <div class="side">
+          <h3 style=${{ marginTop: 0 }}>Checks</h3>
+          ${checks.map((c) => { const [cls, icon] = CHECK_ICON[c.status] || ["", "·"]; return html`<div key=${c.id} class="check">
+            <span class=${"badge " + cls}>${icon}</span><div><b>${c.label}</b><div class="muted">${c.detail}</div></div></div>`; })}
+          <h3>Step</h3>
+          <${StepDetail} sel=${sel} step=${step} onOpenGraph=${onOpenGraph} />
+        </div>
+      </div>
+    </div>`;
+  }
+
   // ---------------------------------------------------------------- app
   function App() {
     const [runs, setRuns] = useState([]);
@@ -226,6 +367,7 @@
     const [compare, setCompare] = useState([]);
     const [compareData, setCompareData] = useState(null);
     const [tab, setTab] = useState("details");
+    const [mode, setMode] = useState(new URLSearchParams(location.search).get("view") === "graph" ? "graph" : "run");
     const rf = useRef(null);
 
     useEffect(() => {
@@ -355,6 +497,7 @@
         setCompare([]);
       } else setCompare([id]);
     };
+    const openGraph = (expId) => { setMode("graph"); setTimeout(() => select(`r${sel.run}:exp:${expId}`), 50); };
     const pickExperiment = (expId) => { const n = graph.nodes.find((x) => x.type === "EXPERIMENT" && x.source_id === expId); if (n) select(n.id); };
 
     const statuses = graph ? [...new Set(graph.nodes.map((n) => n.status))].sort() : [];
@@ -362,19 +505,23 @@
 
     return html`<div class="app">
       <div class="top">
-        <h1>Research Reasoning Graph</h1>
+        <h1>Research</h1>
+        <span class="seg"><button class=${mode === "run" ? "on" : ""} onClick=${() => setMode("run")}>Run</button><button
+          class=${mode === "graph" ? "on" : ""} onClick=${() => setMode("graph")}>Graph</button></span>
         <select value=${sel ? sel.db + "|" + sel.run : ""} onChange=${(e) => { const [db, run] = e.target.value.split("|"); setSel({ db, run: Number(run) }); }}>
           ${runs.map((r) => html`<option key=${r.db + r.id} value=${r.db + "|" + r.id}>${r.name} (${r.domain}, ${r.experiments} exp)</option>`)}
         </select>
+        ${mode === "graph" ? html`
         <input type="text" placeholder="Search titles, rationale, results…" value=${search} onInput=${(e) => setSearch(e.target.value)} style=${{ minWidth: "220px" }} />
         <span class="muted">${q ? matches.size + " match(es)" : ""}</span>
         <span class="grow"></span>
         <button onClick=${unexplored}>Show unexplored</button>
         ${highlight ? html`<button class="on" onClick=${() => setHighlight(null)}>✕ ${highlight.label}</button>` : null}
-        <button onClick=${load}>Refresh</button>
+        <button onClick=${load}>Refresh</button>` : html`<span class="grow"></span>`}
         <a href=${"/api/export.json?" + qs}>Export JSON</a>
         <a href=${"/api/export.md?" + qs}>Export Markdown</a>
       </div>
+      ${mode === "run" ? html`<${RunView} sel=${sel} onOpenGraph=${openGraph} />` : html`<${React.Fragment}>
       <div class="filters">
         ${TYPES.map((t) => html`<button key=${t} class=${"chip " + (hiddenTypes.has(t) ? "" : "on")}
             onClick=${() => setHiddenTypes((h) => { const s = new Set(h); s.has(t) ? s.delete(t) : s.add(t); return s; })}>
@@ -424,7 +571,7 @@
           ${tab === "compare" ? (compareData ? html`<${Compare} data=${compareData} onSelect=${select} onClose=${() => { setCompareData(null); setTab("details"); }} />`
               : html`<p class="muted">Select a node, press “Compare: set A”, then select a second node and press “Compare with A”.</p>`) : null}
         </div>
-      </div>
+      </div></${React.Fragment}>`}
     </div>`;
   }
 

@@ -2,12 +2,17 @@
 
 Per experiment: claim hypothesis -> coder writes program -> sandbox executes ->
 trusted scorer -> (repair and retry on failure) -> LLM analysis -> record.
+
+Every step is also written to `agent_steps` as it starts and ends (phase, status, timing,
+worker, and links to the LLM call / code version / execution behind it), so a run can be
+followed live and audited afterwards as one agent's trace.
 When the hypothesis queue is empty, the researcher is asked for new ones using
 everything recorded so far, which is what closes the feedback loop.
 """
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import getpass
 import hashlib
 import json
@@ -59,6 +64,22 @@ class Controller:
         self.claim_lock = asyncio.Lock()
         self.empty_rounds = 0
 
+    @contextlib.contextmanager
+    def step(self, phase: str, **kw):
+        """Record one agent step. The body may set st["status"], st["summary"] and st["detail"]."""
+        sid = self.memory.start_step(self.run_id, phase, **kw)
+        st = {"status": "ok", "summary": None, "detail": {}}
+        try:
+            yield st
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            self.memory.finish_step(sid, "interrupted", st["summary"], **st["detail"])
+            raise
+        except BaseException as e:
+            self.memory.finish_step(sid, "failed", f"{type(e).__name__}: {e}"[:500], **st["detail"])
+            raise
+        else:
+            self.memory.finish_step(sid, st["status"], st["summary"], **st["detail"])
+
     # --- setup -----------------------------------------------------------
     async def setup(self) -> None:
         if self.adapters is None:
@@ -74,6 +95,7 @@ class Controller:
             items = "; ".join(f"{k}: {old} -> {new}" for k, old, new in grow)
             raise ApprovalRequired(f"these limits/permissions grow and need human approval: {items}. "
                                    "Re-run with --approve to confirm.")
+        n = 0
         if run is None:
             await self._prepare_data()
             integrity = self.domain.snapshot(self.private_dir)
@@ -93,6 +115,11 @@ class Controller:
             objective = run["objective"]
         for k, old, new in grow:
             self.memory.record_approval(self.run_id, k, old, new, getpass.getuser())
+        with self.step("session") as st:
+            st["summary"] = (f"resumed run; {n} interrupted experiment(s) re-queued" if run else "created run")
+            st["detail"] = {"system_revision": self.revision, "image_id": self.image_id, "limits": limits,
+                            "approved": [{"item": k, "old": o, "new": v} for k, o, v in grow],
+                            "provider": self.cfg.llm.provider, "model": self.cfg.llm.model}
         self.budget = Budget(self.memory, self.run_id, self.cfg.budget_usd)
         self.llm = LLM(self.cfg, self.memory, self.run_id, self.budget, adapters=self.adapters,
                        fixture=self.domain.offline_fixture())
@@ -125,9 +152,14 @@ class Controller:
         workers = [asyncio.create_task(self.worker(i)) for i in range(self.cfg.workers)]
         # A crashed worker sets stop_reason, so the others finish their current experiment and exit.
         errors = [r for r in await asyncio.gather(*workers, return_exceptions=True) if isinstance(r, BaseException)]
+        reason = self.stop_reason or "done"
+        with self.step("stop") as st:
+            st["status"] = "failed" if errors else "ok"
+            st["summary"] = reason
+            st["detail"] = {"spent_usd": round(self.budget.spent(), 4), "budget_usd": self.cfg.budget_usd,
+                            "experiments": self.memory.count_experiments(self.run_id)}
         if errors:
             raise errors[0]
-        reason = self.stop_reason or "done"
         log.info("stopped: %s | spent $%.4f of $%.2f", reason, self.budget.spent(), self.cfg.budget_usd)
         return reason
 
@@ -154,7 +186,13 @@ class Controller:
                 h = self.memory.claim_next_hypothesis(self.run_id)
                 if h is None:
                     try:
-                        ids = await self.researcher.propose(self.cfg.hypotheses_per_round)
+                        with self.step("propose", worker=wid) as st:
+                            ids = await self.researcher.propose(self.cfg.hypotheses_per_round)
+                            titles = [self.memory.one("SELECT title FROM hypotheses WHERE id=?", i)["title"]
+                                      for i in ids]
+                            st["summary"] = (f"proposed {len(ids)}: " + "; ".join(titles)) if ids else \
+                                "no new hypotheses"
+                            st["detail"] = {"hypothesis_ids": ids}
                     except BudgetExceeded as e:
                         self.stop(f"budget: {e}")
                         return
@@ -175,7 +213,7 @@ class Controller:
                 self.memory.update_experiment(exp_id, seed=_seed(self.cfg.name, exp_id))
             log.info("[w%d] exp #%d: %s", wid, exp_id, h["title"])
             try:
-                await self.run_experiment(exp_id, h)
+                await self.run_experiment(exp_id, h, wid)
             except IntegrityError as e:
                 self.memory.finish_experiment(exp_id, status="failed", error=str(e))
                 self.stop(f"INTEGRITY: {e}")
@@ -192,50 +230,68 @@ class Controller:
         if not res.ok:
             self.memory.finish_experiment(exp_id, status="failed", error=res.stderr[-2000:])
             raise RuntimeError(f"baseline failed:\n{res.stderr[-2000:]}")
-        scores = self.evaluator.score(out)
+        with self.step("score", experiment_id=exp_id, attempt=1) as st:
+            scores = self.evaluator.score(out)
+            st["summary"] = f"baseline val {self.domain.metric} {scores['val']:.4f}"
+            st["detail"] = {"val": scores["val"], "test": scores["test"]}
         self.memory.finish_experiment(exp_id, status="completed", seed=seed, attempts=1, code_version_id=cv,
                                       val_score=scores["val"], test_score=scores["test"], baseline_val=scores["val"],
                                       improvement=0.0, success=0)
         log.info("baseline: val %s = %.4f", self.domain.metric, scores["val"])
 
-    async def _execute(self, exp_id: int, attempt: int, cv_id: int, code: str, seed: int) -> tuple[ExecResult, Path]:
+    async def _execute(self, exp_id: int, attempt: int, cv_id: int, code: str, seed: int,
+                       wid: int | None = None) -> tuple[ExecResult, Path]:
         ws = self.work / f"exp_{exp_id:04d}" / f"attempt_{attempt}"
         if ws.exists():
             shutil.rmtree(ws)
         (ws / "code").mkdir(parents=True)
         (ws / "out").mkdir()
         (ws / "code" / "experiment.py").write_text(code, encoding="utf-8")
-        res = await self.executor.run(
-            label=f"{self.run_id}-{exp_id}-{attempt}", argv=["python", "/code/experiment.py"],
-            env={"SEED": str(seed), "PYTHONHASHSEED": "0"},
-            mounts=[(ws / "code", "/code", True), (self.public_dir, "/data", True), (ws / "out", "/out", False)])
-        self.memory.add_execution(experiment_id=exp_id, code_version_id=cv_id, attempt=attempt,
-                                  image=self.cfg.sandbox.image, image_id=res.image_id, command=json.dumps(res.command),
-                                  exit_code=res.exit_code, timed_out=int(res.timed_out), duration_s=res.duration_s,
-                                  stdout_tail=res.stdout, stderr_tail=res.stderr)
+        with self.step("execute", experiment_id=exp_id, attempt=attempt, worker=wid) as st:
+            res = await self.executor.run(
+                label=f"{self.run_id}-{exp_id}-{attempt}", argv=["python", "/code/experiment.py"],
+                env={"SEED": str(seed), "PYTHONHASHSEED": "0"},
+                mounts=[(ws / "code", "/code", True), (self.public_dir, "/data", True), (ws / "out", "/out", False)])
+            xid = self.memory.add_execution(experiment_id=exp_id, code_version_id=cv_id, attempt=attempt,
+                                            image=self.cfg.sandbox.image, image_id=res.image_id,
+                                            command=json.dumps(res.command), exit_code=res.exit_code,
+                                            timed_out=int(res.timed_out), duration_s=res.duration_s,
+                                            stdout_tail=res.stdout, stderr_tail=res.stderr)
+            st["status"] = "ok" if res.ok else "failed"
+            st["summary"] = (f"exit 0 in {res.duration_s:.1f}s" if res.ok else
+                             f"timed out after {self.cfg.sandbox.timeout_s}s" if res.timed_out else
+                             f"exit {res.exit_code} after {res.duration_s:.1f}s")
+            st["detail"] = {"execution_id": xid, "code_version_id": cv_id, "workspace": str(ws)}
         (ws / "stdout.txt").write_text(res.stdout, encoding="utf-8")
         (ws / "stderr.txt").write_text(res.stderr, encoding="utf-8")
         return res, ws / "out"
 
-    async def run_experiment(self, exp_id: int, h: dict) -> None:
+    async def run_experiment(self, exp_id: int, h: dict, wid: int | None = None) -> None:
         seed = self.memory.one("SELECT seed FROM experiments WHERE id=?", exp_id)["seed"]
         base = self.memory.baseline(self.run_id)
         prev_code = prev_err = prev_cv = None
         attempts = self.cfg.max_fix_attempts + 1
+        ids = {"experiment_id": exp_id, "worker": wid}
         for attempt in range(1, attempts + 1):
             try:
-                code, expl, perms, call_id = await self.coder.implement(
-                    experiment_id=exp_id, hypothesis=h, attempt=attempt, previous_code=prev_code,
-                    previous_error=prev_err)
+                with self.step("implement", hypothesis_id=h["id"], attempt=attempt, **ids) as st:
+                    code, expl, perms, call_id = await self.coder.implement(
+                        experiment_id=exp_id, hypothesis=h, attempt=attempt, previous_code=prev_code,
+                        previous_error=prev_err)
+                    st["summary"] = (f"repair after: {prev_err.splitlines()[0][:120]}" if prev_err else "first version") \
+                        + f" | {expl[:200]}"
+                    st["detail"] = {"llm_call_id": call_id, "requested_permissions": perms}
             except BudgetExceeded as e:
                 # Not the hypothesis's fault: leave it queued for a resumed run with more budget.
                 self.memory.finish_experiment(exp_id, status="interrupted", attempts=attempt - 1, error=f"budget: {e}")
                 self.memory.set_hypothesis_status(h["id"], "pending")
+                self._decide(exp_id, h, wid, "interrupted", f"budget: {e}")
                 self.stop(f"budget: {e}")
                 return
             except ProviderUnavailable as e:
                 self.memory.finish_experiment(exp_id, status="interrupted", attempts=attempt - 1, error=f"provider: {e}")
                 self.memory.set_hypothesis_status(h["id"], "pending")
+                self._decide(exp_id, h, wid, "interrupted", f"provider: {e}")
                 self.stop(f"provider: {e}")
                 return
             except LLMOutputError as e:
@@ -248,7 +304,7 @@ class Controller:
                                               code=code, code_sha256=hashlib.sha256(code.encode()).hexdigest(),
                                               explanation=expl, llm_call_id=call_id)
             self.memory.update_experiment(exp_id, attempts=attempt, code_version_id=cv)
-            res, out = await self._execute(exp_id, attempt, cv, code, seed)
+            res, out = await self._execute(exp_id, attempt, cv, code, seed, wid)
             prev_code, prev_cv = code, cv
             if not res.ok:
                 why = f"timed out after {self.cfg.sandbox.timeout_s}s" if res.timed_out else f"exit code {res.exit_code}"
@@ -256,7 +312,10 @@ class Controller:
                 log.info("exp #%d attempt %d failed: %s", exp_id, attempt, why)
                 continue
             try:
-                scores = self.evaluator.score(out)
+                with self.step("score", attempt=attempt, **ids) as st:
+                    scores = self.evaluator.score(out)
+                    st["summary"] = f"val {self.domain.metric} {scores['val']:.4f}"
+                    st["detail"] = {"val": scores["val"], "test": scores["test"]}
             except IntegrityError:
                 raise
             except Exception as e:
@@ -265,13 +324,22 @@ class Controller:
                 prev_err = f"program exited 0 but its outputs were rejected by the scorer: {e}"
                 log.info("exp #%d attempt %d: outputs rejected: %s", exp_id, attempt, e)
                 continue
-            await self._record_success(exp_id, h, base, scores, res)
+            await self._record_success(exp_id, h, base, scores, res, wid)
             return
         self.memory.finish_experiment(exp_id, status="failed", error=prev_err)
         self.memory.set_hypothesis_status(h["id"], "done")
+        self._decide(exp_id, h, wid, "failed", f"failed after {attempt} attempt(s): {(prev_err or '').splitlines()[0][:200]}")
         log.info("exp #%d FAILED after %d attempt(s)", exp_id, attempt)
 
-    async def _record_success(self, exp_id: int, h: dict, base: dict, scores: dict, res: ExecResult) -> None:
+    def _decide(self, exp_id: int, h: dict, wid: int | None, outcome: str, summary: str, **detail) -> None:
+        """The deterministic outcome of an experiment, as the last step of its trace."""
+        with self.step("decide", experiment_id=exp_id, hypothesis_id=h["id"], worker=wid) as st:
+            st["status"] = {"failed": "failed", "interrupted": "interrupted"}.get(outcome, "ok")
+            st["summary"] = summary
+            st["detail"] = {"outcome": outcome, **detail}
+
+    async def _record_success(self, exp_id: int, h: dict, base: dict, scores: dict, res: ExecResult,
+                              wid: int | None = None) -> None:
         imp, success = self.evaluator.judge(scores["val"], base["val_score"])
         prior = [e["val_score"] for e in self.memory.experiments(self.run_id)
                  if e["status"] == "completed" and e["id"] != exp_id]
@@ -280,10 +348,13 @@ class Controller:
         lessons: list[str] = []
         if self.evaluator.llm is not None:
             try:
-                a = await self.evaluator.analyse(experiment_id=exp_id, hypothesis=h, val=scores["val"],
-                                                 baseline_val=base["val_score"], improvement=imp, success=success,
-                                                 stdout=res.stdout, best_so_far=best_before)
-                verdict, analysis, lessons = a["verdict"], a["analysis"], a["lessons"]
+                with self.step("reflect", experiment_id=exp_id, hypothesis_id=h["id"], worker=wid) as st:
+                    a = await self.evaluator.analyse(experiment_id=exp_id, hypothesis=h, val=scores["val"],
+                                                     baseline_val=base["val_score"], improvement=imp, success=success,
+                                                     stdout=res.stdout, best_so_far=best_before)
+                    verdict, analysis, lessons = a["verdict"], a["analysis"], a["lessons"]
+                    st["summary"] = f"analyst: {verdict} | {analysis[:200]}"
+                    st["detail"] = {"verdict": verdict, "lessons": lessons}
             except BudgetExceeded as e:
                 self.stop(f"budget: {e}")
             except ProviderUnavailable as e:
@@ -295,5 +366,9 @@ class Controller:
                                       baseline_val=base["val_score"], improvement=imp, success=int(success),
                                       verdict=verdict, analysis=analysis, lessons=json.dumps(lessons))
         self.memory.set_hypothesis_status(h["id"], "done")
+        self._decide(exp_id, h, wid, "success" if success else "no_improvement",
+                     f"{'SUCCESS' if success else 'no improvement'}: val {scores['val']:.4f} ({imp:+.4f} vs baseline, "
+                     f"threshold {self.domain.min_improvement})", val=scores["val"], improvement=imp,
+                     best_before=best_before)
         log.info("exp #%d: val %.4f (%+.4f vs baseline) %s", exp_id, scores["val"], imp,
                  "SUCCESS" if success else "no improvement")

@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from . import graph as G
+from . import steps as S
 from .memory import Memory
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,14 +42,18 @@ class Store:
                 m.close()
         return out
 
-    def graph(self, db: str, run_id: int) -> tuple[Memory, G.Graph]:
+    def open(self, db: str, run_id: int) -> tuple[Memory, dict, Path | None]:
         m = Memory(self.db_path(db))
         run = m.one("SELECT * FROM runs WHERE id=?", run_id)
         if not run:
             m.close()
             raise LookupError(f"no run {run_id} in {db}")
         work = self.runs_dir / run["name"]
-        g = G.refresh(m, run, work_dir=work if work.exists() else None, domain=G.open_domain(run["domain"]))
+        return m, run, (work if work.exists() else None)
+
+    def graph(self, db: str, run_id: int) -> tuple[Memory, G.Graph]:
+        m, run, work = self.open(db, run_id)
+        g = G.refresh(m, run, work_dir=work, domain=G.open_domain(run["domain"]))
         return m, g
 
 
@@ -112,6 +117,16 @@ def make_handler(store: Store):
         def api(self, name: str, q: dict):
             if name == "runs":
                 return self.js(store.runs())
+            if name in ("steps", "step", "checks"):       # agent trace: read-only, no graph rebuild
+                m, run, work = store.open(q["db"], int(q["run"]))
+                try:
+                    if name == "steps":
+                        return self.js(S.timeline(m, run))
+                    if name == "step":
+                        return self.js(S.step_detail(m, run, q["id"]))
+                    return self.js(S.checks(m, run, work, G.open_domain(run["domain"])))
+                finally:
+                    m.close()
             m, g = store.graph(q["db"], int(q["run"]))
             try:
                 if name == "graph":

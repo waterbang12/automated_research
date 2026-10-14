@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     model TEXT, system TEXT, prompt TEXT, response TEXT, input_tokens INTEGER,
     output_tokens INTEGER, cost_usd REAL, error TEXT, created_at REAL
 );
+CREATE TABLE IF NOT EXISTS agent_steps (
+    id INTEGER PRIMARY KEY, run_id INTEGER, experiment_id INTEGER, hypothesis_id INTEGER,
+    phase TEXT,                         -- session | propose | implement | execute | score | reflect | decide | stop
+    attempt INTEGER, worker INTEGER,
+    status TEXT,                        -- running | ok | failed | skipped
+    summary TEXT, detail_json TEXT, started_at REAL, finished_at REAL
+);
 CREATE TABLE IF NOT EXISTS permission_requests (
     id INTEGER PRIMARY KEY, run_id INTEGER, experiment_id INTEGER, request TEXT,
     status TEXT DEFAULT 'pending', created_at REAL
@@ -108,6 +115,8 @@ class Memory:
             if e["hypothesis_id"]:
                 self._update("hypotheses", e["hypothesis_id"], status="pending")
         self.db.execute("UPDATE hypotheses SET status='pending' WHERE run_id=? AND status='claimed'", (run_id,))
+        self.db.execute("UPDATE agent_steps SET status='interrupted', finished_at=? WHERE run_id=? AND status='running'",
+                        (time.time(), run_id))
         return len(stuck)
 
     # --- hypotheses -------------------------------------------------------
@@ -169,6 +178,25 @@ class Memory:
 
     def total_cost(self, run_id: int) -> float:
         return self.one("SELECT COALESCE(SUM(cost_usd), 0) c FROM llm_calls WHERE run_id=?", run_id)["c"]
+
+    # --- agent step log -------------------------------------------------------
+    def start_step(self, run_id: int, phase: str, *, experiment_id: int | None = None,
+                   hypothesis_id: int | None = None, attempt: int | None = None, worker: int | None = None,
+                   summary: str = "") -> int:
+        return self.db.execute(
+            "INSERT INTO agent_steps (run_id, experiment_id, hypothesis_id, phase, attempt, worker, status, summary,"
+            " detail_json, started_at) VALUES (?,?,?,?,?,?, 'running', ?, '{}', ?)",
+            (run_id, experiment_id, hypothesis_id, phase, attempt, worker, summary, time.time())).lastrowid
+
+    def finish_step(self, step_id: int, status: str, summary: str | None = None, **detail) -> None:
+        row = self.one("SELECT detail_json, summary FROM agent_steps WHERE id=?", step_id)
+        merged = {**json.loads(row["detail_json"] or "{}"), **detail}
+        self._update("agent_steps", step_id, status=status, finished_at=time.time(),
+                     summary=row["summary"] if summary is None else summary,
+                     detail_json=json.dumps(merged, default=str))
+
+    def steps(self, run_id: int) -> list[dict]:
+        return self.rows("SELECT * FROM agent_steps WHERE run_id=? ORDER BY started_at, id", run_id)
 
     def add_permission_request(self, run_id, experiment_id, request) -> int:
         return self._insert("permission_requests", run_id=run_id, experiment_id=experiment_id, request=request)

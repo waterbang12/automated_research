@@ -128,6 +128,46 @@ automatically. To grant one, a human edits the sandbox config or image and runs 
 **Stop conditions:** experiment limit reached, budget cannot cover the next call's worst
 case, three researcher rounds in a row with no new idea, or an integrity violation.
 
+## Watching and auditing a run (Run page)
+
+Each run is presented as **one agent working through steps**: *session → propose →
+(implement → execute → score)+ → reflect → decide → … → stop*. The researcher, coder and analyst
+are phases of that agent. The sandbox, the trusted scorer and the decision rule are
+deterministic steps in the same trace. The controller writes every step to the `agent_steps`
+table as it starts and as it ends. Each step records its phase, status, worker, attempt and
+timing, plus links to the exact LLM call, code version and execution behind it.
+
+```powershell
+.venv\Scripts\python -m research graph serve      # http://127.0.0.1:8765/ opens on the Run page
+```
+
+The Run page is read-only. Runs are still started, stopped and resumed from the terminal.
+- **Timeline:** every step in order, filterable by phase or experiment, with a "Problems only" view for failed and interrupted steps. While a run is active the page refreshes every 3 seconds and in-progress steps are marked.
+- **Step details:**
+  - the exact system prompt, prompt and response of each LLM call, including re-asks after invalid output
+  - the program, with a **diff against the attempt it repairs**
+  - the docker command, exit code, stdout and stderr
+  - the hypotheses a researcher step proposed
+- **Open in graph:** jumps to the experiment in the reasoning graph.
+- **Checks:** whether this run can be trusted:
+  - evaluation integrity: hashes of the scorer, data preparation, baseline and held-out labels are re-checked now
+  - budget against its cap
+  - LLM call errors
+  - approvals of raised limits
+  - pending permission requests, which are never auto-granted
+  - sandbox isolation
+  - failures and repairs
+  - validation vs held-out test gap for the best result
+  - whether the system code or sandbox image changed mid-run
+
+Runs recorded before step logging existed get a timeline **reconstructed** from their records,
+labelled as such. It has end times only and no in-flight steps.
+
+![run page](docs/sample-run/run-page.png)
+*A real Claude run (`digits-cheap-vs-heavy`, reconstructed trace). The screenshot of the test
+fixture's run shows repairs, a timeout, a scorer rejection and a pending permission:
+[docs/sample-run/repairs-and-failures.png](docs/sample-run/repairs-and-failures.png).*
+
 ## Research Reasoning Graph
 
 An interactive graph of how a run got to its conclusions. It shows each question, its
@@ -209,7 +249,7 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
 .venv/Scripts/python -m pytest -q
 ```
 
-36 tests in about 20 seconds:
+43 tests in about 30 seconds:
 
 - **Schema validation**
 - **Budget:** worst-case reservation, and concurrent reservations that cannot overspend
@@ -231,6 +271,13 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
   - lineage (path to question, trace back/forward, compare), stable ids, idempotent rebuilds
   - manual rows survive rebuilds, and dropped derivations go stale rather than being deleted
   - backward compatibility with databases that predate the graph, plus export and the viewer API (including path traversal being rejected)
+- **Agent step log and Run page** (`tests/test_steps.py`): the live trace of a full controller run is checked step by step, covering:
+  - repair chains, timeouts, scorer rejections and failed decisions
+  - links from each step to its exact prompt, code (and previous version) and logs
+  - all checks, including detection of tampered held-out labels and a pending permission
+  - a provider outage recorded as interrupted rather than failed
+  - steps left dangling by a killed session marked interrupted on resume
+  - reconstruction for older databases, and the API
 - **Claude CLI adapter:** a fake `claude` script checks the arguments, stdin/system-prompt
   passing, that the API key is stripped, and usage/cost parsing
 

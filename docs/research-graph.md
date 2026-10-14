@@ -179,6 +179,8 @@ I investigated this by reading the code; no change was made.
   - **Independent review.** The analyst would grade its own idea.
 - **Recommendation.** Keep the three phases as stateless structured calls. Keep the executor, sandbox, trusted evaluator and persistence deterministic, as they are now. If merging is still interesting, test it before adopting it: fixed budget, same domain and seeds, comparing best validation score reached per dollar and the rate of invalid programs.
 
+**What was done instead (step 1 of the plan).** The three phases are now *presented and audited* as one agent. The controller records every step (session, propose, implement, execute, score, reflect, decide, stop) in `agent_steps` with links to its exact prompt, code and logs. The read-only Run page in the viewer shows that trace live, next to a checks panel. See the README section "Watching and auditing a run".
+
 ## Limitations
 
 - **Decisions:** they are reconstructed after the fact (see tradeoffs). Rejected alternatives the researcher considered but never wrote down are invisible.

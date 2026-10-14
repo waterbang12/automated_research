@@ -124,7 +124,36 @@ table.t td, table.t th { border-bottom: 1px solid var(--grid); padding: 3px 4px;
 .next-item:hover { background: var(--surface-2); }
 .err { color: var(--critical); padding: 12px; }
 
+/* run page */
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; }
+.seg button:first-child { border-radius: 6px 0 0 6px; }
+.seg button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.runview { grid-row: 2 / 4; display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+.runbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.runbar .lbl { color: var(--muted); }
+.runbar .grow { flex: 1; }
+.runmain { display: grid; grid-template-columns: 1fr 520px; min-height: 0; }
+.timeline { overflow: auto; background: var(--surface); }
+.tstep { display: grid; grid-template-columns: 22px 78px 56px 1fr auto; gap: 8px; align-items: baseline; padding: 5px 12px; border-bottom: 1px solid var(--grid); cursor: pointer; font-size: 12.5px; }
+.tstep:hover { background: var(--surface-2); }
+.tstep.sel { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.tstep .tphase { font-weight: 600; }
+.tstep .texp { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tstep .tsum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tstep .ttime { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tstep.ph-propose .tphase { color: var(--t-hypothesis); }
+.tstep.ph-decide .tphase, .tstep.ph-stop .tphase, .tstep.ph-session .tphase { color: var(--t-decision); }
+.check { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--grid); }
+.call { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; }
+pre.diff div.add { background: rgba(12, 163, 12, 0.14); }
+pre.diff div.del { background: rgba(208, 59, 59, 0.14); }
+.pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+
 @media (max-width: 900px) {
+  .runmain { grid-template-columns: 1fr; grid-template-rows: 50vh auto; }
   .main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
   .side { border-left: 0; border-top: 1px solid var(--border); }
   .top, .filters { padding-left: 16px; padding-right: 16px; }
