@@ -139,3 +139,15 @@ def test_offline_fixture_uses_history():
     assert {h["title"] for h in nxt}.isdisjoint({first[0]["title"]})
     code = fx.coder({"hypothesis": nxt[0]})["code"]
     compile(code, "x", "exec")
+
+
+def test_report_best_respects_lower_is_better(tmp_path, capsys):
+    from research.__main__ import print_report
+    from research.memory import Memory
+    m = Memory(tmp_path / "r.db")
+    rid = m.create_run("r", "planted", "minimise rmse", {}, {}, "rev", {})
+    for val, imp in ((2.0, 0.0), (0.9, 1.1), (0.6, 1.4)):          # rmse: lower is better, improvement positive
+        e = m.start_experiment(rid, None, 0, "rev", is_baseline=(imp == 0.0))
+        m.finish_experiment(e, status="completed", val_score=val, test_score=val, improvement=imp, success=int(imp > 0))
+    print_report(m, "r")
+    assert "Best by validation: #3" in capsys.readouterr().out

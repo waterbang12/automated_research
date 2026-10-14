@@ -45,6 +45,15 @@ def system_revision() -> str:
     return h.hexdigest()[:12]
 
 
+def prepare_mounts(domain: Domain, code_dir: Path, public: Path, private: Path) -> list[tuple[Path, str, bool]]:
+    """prepare.py sees its code, the domain's raw data (read-only, if any) and the two output dirs."""
+    mounts = [(code_dir, "/code", True), (public, "/public", False), (private, "/private", False)]
+    raw = domain.dir / "data"
+    if raw.is_dir():
+        mounts.append((raw, "/raw", True))
+    return mounts
+
+
 def _seed(run_name: str, exp_id: int) -> int:
     return int(hashlib.sha256(f"{run_name}:{exp_id}".encode()).hexdigest()[:8], 16)
 
@@ -137,9 +146,8 @@ class Controller:
         code_dir = self.work / "data" / "prepare"
         code_dir.mkdir(parents=True, exist_ok=True)
         (code_dir / "prepare.py").write_text(self.domain.prepare_code(), encoding="utf-8")
-        res = await self.executor.run(
-            label="prepare", argv=["python", "/code/prepare.py"], env={},
-            mounts=[(code_dir, "/code", True), (self.public_dir, "/public", False), (self.private_dir, "/private", False)])
+        res = await self.executor.run(label="prepare", argv=["python", "/code/prepare.py"], env={},
+                                      mounts=prepare_mounts(self.domain, code_dir, self.public_dir, self.private_dir))
         if not res.ok:
             raise RuntimeError(f"data preparation failed:\n{res.stderr}")
         log.info("prepared data: %s", res.stdout.strip())
@@ -192,7 +200,9 @@ class Controller:
                                       for i in ids]
                             st["summary"] = (f"proposed {len(ids)}: " + "; ".join(titles)) if ids else \
                                 "no new hypotheses"
-                            st["detail"] = {"hypothesis_ids": ids}
+                            st["detail"] = {"hypothesis_ids": ids,
+                                            "decision": getattr(self.researcher, "last_decision", None),
+                                            "decision_id": getattr(self.researcher, "last_decision_id", None)}
                     except BudgetExceeded as e:
                         self.stop(f"budget: {e}")
                         return

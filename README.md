@@ -249,7 +249,7 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
 .venv/Scripts/python -m pytest -q
 ```
 
-43 tests in about 30 seconds:
+49 tests in about 40 seconds:
 
 - **Schema validation**
 - **Budget:** worst-case reservation, and concurrent reservations that cannot overspend
@@ -281,21 +281,41 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
 - **Claude CLI adapter:** a fake `claude` script checks the arguments, stdin/system-prompt
   passing, that the API key is stripped, and usage/cost parsing
 
-## Adding a research domain
+## Formulating a problem (adding a research domain)
 
-Create `domains/<name>/` with these files:
+The quickest way in is from a CSV with a target column:
+
+```powershell
+.venv\Scripts\python -m research new-domain churn --csv C:\data\churn.csv --target churned `
+    --objective "Predict churn as accurately as possible, and find out which customer signals matter most."
+.venv\Scripts\python -m research check-domain churn                 # no LLM: prepare, baseline, scorer checks
+.venv\Scripts\python -m research run configs/churn.toml --max-experiments 2
+```
+
+`new-domain` writes `domains/<name>/` and `configs/<name>.toml`. The domain contains the data,
+plus a fixed train/val/test split, a strict scorer (accuracy or RMSE), an honest baseline and the
+coder's contract. Every file is editable. `check-domain` proves the domain is sound before an
+agent sees it.
+
+A domain is these files:
 
 | File | Purpose |
 |---|---|
-| `domain.toml` | `name`, `objective`, `metric`, `higher_is_better`, `min_improvement`, and `contract`: the exact instructions given to the coder (inputs under `/data`, required files in `/out`, libraries, rules). |
+| `domain.toml` | `name`, `objective` (the research question), `metric`, `higher_is_better`, `min_improvement`, and `contract`: the exact instructions given to the coder (inputs under `/data`, required files in `/out`, libraries, rules). |
+| `data/` | *(optional)* raw files, mounted read-only at `/raw` for `prepare.py` only. |
 | `prepare.py` | Runs once per run inside the sandbox. It writes agent-visible inputs to `/public` and held-out answers to `/private`. |
 | `scorer.py` | Trusted host code. It must define `score(out_dir, private_dir) -> {"val": float, "test": float}` and a `ScoreError` exception, raised for invalid outputs (which triggers a repair attempt). Parse strictly. |
 | `baseline.py` | A reference program that follows the contract. It runs first, and every candidate is compared with it. |
 | `offline_fixture.py` | *(optional)* `researcher(ctx)`, `coder(ctx)`, `analyst(ctx)`, for credential-free runs and demos. |
 
-Then copy a config, set `domain = "<name>"`, and run it. If the domain needs other
-libraries, add them to `sandbox/Dockerfile`, rebuild, and bump the image tag. Changing
-the image of an existing run does not need approval, so treat it as a human-only action.
+If the domain needs other libraries, add them to `sandbox/Dockerfile`, rebuild, and bump the
+image tag. Changing the image of an existing run does not need approval, so treat it as a
+human-only action.
+
+**[docs/formulating-and-testing.md](docs/formulating-and-testing.md)** covers how to write a good
+objective, choose the success threshold, build custom (non-CSV) problems, and **test the agent**
+on problems with a known answer. `examples/planted_regression.py` generates one; the `planted`
+domain was built from it.
 
 ## The bundled benchmark: `digits`
 

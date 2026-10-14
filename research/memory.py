@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     model TEXT, system TEXT, prompt TEXT, response TEXT, input_tokens INTEGER,
     output_tokens INTEGER, cost_usd REAL, error TEXT, created_at REAL
 );
+CREATE TABLE IF NOT EXISTS research_decisions (
+    id INTEGER PRIMARY KEY, run_id INTEGER, llm_call_id INTEGER, data_json TEXT, created_at REAL
+);
 CREATE TABLE IF NOT EXISTS agent_steps (
     id INTEGER PRIMARY KEY, run_id INTEGER, experiment_id INTEGER, hypothesis_id INTEGER,
     phase TEXT,                         -- session | propose | implement | execute | score | reflect | decide | stop
@@ -70,6 +73,9 @@ class Memory:
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
+        # Columns added after the first release; ALTER keeps older databases working.
+        if "falsified_if" not in {r["name"] for r in self.rows("PRAGMA table_info(hypotheses)")}:
+            self.db.execute("ALTER TABLE hypotheses ADD COLUMN falsified_if TEXT")
 
     def close(self) -> None:
         self.db.close()
@@ -124,7 +130,14 @@ class Memory:
         return self._insert("hypotheses", run_id=run_id, title=h["title"], rationale=h["rationale"],
                             method=h["method"], expected_metric=h["expected_metric"],
                             priority=h["priority"], parent_experiment_ids=json.dumps(h["parent_experiment_ids"]),
-                            llm_call_id=llm_call_id)
+                            falsified_if=h.get("falsified_if"), llm_call_id=llm_call_id)
+
+    def add_decision(self, run_id: int, llm_call_id: int | None, data: dict) -> int:
+        return self._insert("research_decisions", run_id=run_id, llm_call_id=llm_call_id, data_json=json.dumps(data))
+
+    def decisions(self, run_id: int) -> list[dict]:
+        return [{**r, "data": json.loads(r["data_json"])} for r in
+                self.rows("SELECT * FROM research_decisions WHERE run_id=? ORDER BY id", run_id)]
 
     def claim_next_hypothesis(self, run_id: int) -> dict | None:
         h = self.one("SELECT * FROM hypotheses WHERE run_id=? AND status='pending' "

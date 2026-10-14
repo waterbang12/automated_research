@@ -11,8 +11,10 @@ is one of two kinds:
 
 Each node says which kind it is.
 
-Status: **Phase 1 is complete.** It covers the data model, graph generation from existing records,
-and an interactive viewer. Phases 2–4 are not started (see [Next improvements](#next-improvements)).
+Status:
+- **Phase 1 is complete:** the data model, graph generation from existing records, and an interactive viewer.
+- **Phase 2 is complete:** decisions are captured live, and the viewer has lineage tracing and historical replay.
+- **Phases 3–4 are not started:** see [Next improvements](#next-improvements).
 
 ```powershell
 .venv\Scripts\python -m research graph serve                                  # viewer at http://127.0.0.1:8765/
@@ -64,6 +66,7 @@ towards the conclusions.
 | EXPERIMENT | `experiments` | Links to code versions, executions, LLM calls, seed and workspace. |
 | EVIDENCE | scored experiment | Validation and test score, improvement, and **paired McNemar test** vs. the baseline (see below). A failed run gives `invalid` evidence with **no** edge to its hypothesis. |
 | DECISION | each finished experiment | `before`, `alternatives` (other hypotheses from the same researcher call), `new_evidence`, `affected`, `why`, `why_next` (later hypotheses citing this result, with the researcher's quoted rationale) and `uncertain`. |
+| DECISION (round) | `research_decisions`, written live by the researcher | **Recorded**, not derived: the researcher's own decision record for each round. It holds the current belief, the evidence used (experiment ids, sanitised), the alternatives considered but not proposed and why, the assumptions relied on or questioned, what is uncertain, and why these hypotheses. Alternatives become HYPOTHESIS nodes with status `considered`. Uncertainties become OPEN_QUESTION nodes: `open` for the latest round, `raised_earlier` for older ones. |
 | CONCLUSION | each new best, in completion order | Each new best `supersedes` the previous one, which stays as `superseded`. |
 | OPEN_QUESTION | statistics | Top results that are statistically tied, and a threshold that is below the noise level. |
 
@@ -159,7 +162,7 @@ not-investigated ones, using records from a full controller run
 
 ## Design tradeoffs
 
-- **Derived, not captured (yet).** Phase 1 reconstructs decisions from records that already exist. That works for every past run immediately and cannot drift from the records. The cost is that alternatives are limited to hypotheses proposed in the same researcher call, and "why next" is the researcher's rationale, not a statement made at decision time. Phase 2 would capture decisions live.
+- **Recorded where possible, derived otherwise.** Since Phase 2, each research round has a decision record that the researcher writes at decision time, as part of its structured output, so it costs no extra call. The decision after each *experiment* is still derived from the evaluator's numeric outcome, so it can never disagree with the scorer. Runs recorded before Phase 2 have only the derived decisions.
 - **The numeric outcome is the decision.** The loop's success rule ("beat the baseline by `min_improvement`") drives the verdicts, so the graph never disagrees with the evaluator. The analyst's verdict and lessons are shown as commentary only. A hypothesis that was really a question ("does X match Y?") is still judged by that rule. The graph flags this when the researcher's own prediction held.
 - **Same database, additive tables.** There is no new datastore or service. Large artifacts (code, logs, predictions) stay where the loop already puts them: code and log tails in SQLite, full outputs under `runs/<name>/exp_NNNN/`. Graph nodes reference them by id and path.
 - **Rebuilt on every view.** Each graph request re-derives the graph, which is idempotent and takes milliseconds for runs of this size. The viewer therefore shows runs still in progress without any hooks into the controller. For runs with thousands of experiments this would need incremental derivation.
@@ -183,7 +186,7 @@ I investigated this by reading the code; no change was made.
 
 ## Limitations
 
-- **Decisions:** they are reconstructed after the fact (see tradeoffs). Rejected alternatives the researcher considered but never wrote down are invisible.
+- **Decision records are self-reports.** They are what the researcher *wrote* when it decided, not a guarantee of why it decided. The graph places them next to the measured evidence and its strength, so overclaims are visible. Runs from before Phase 2 have no round records.
 - **Statistics:**
   - The paired test is only used for accuracy with per-example predictions on disk. Other metrics fall back to the unpaired approximation.
   - All comparisons use one validation split.
@@ -196,7 +199,7 @@ I investigated this by reading the code; no change was made.
 
 ## Next improvements
 
-1. **Phase 2: capture decisions live.** Extend the researcher's schema with explicit `considered_alternatives`, `rejected_because`, `assumptions_touched` and `uncertain`, and write them as `recorded` DECISION nodes when hypotheses are proposed. Add historical replay: a time slider over `created_at` that shows the graph as it was after experiment *k*.
+1. ~~Phase 2: capture decisions live, and historical replay.~~ Done. The researcher writes a decision record each round, and the Graph view has a replay slider that shows the graph as it stood after each decision.
 2. **Repeated-CV / multi-seed "noise check" experiments.** The Next-steps tab already proposes them. Add them as a first-class experiment type so open questions can be closed.
 3. **Phase 3: method cards from literature.** Use permitted sources only, and store bibliographic provenance and quoted passages as EVIDENCE with `source` details. Never fabricate.
 4. **Phase 4: retrieval and prioritisation.** Rank memories separately by relevance, evidence strength, information value and recency, without discounting negative results. Feed that ranking to the researcher.

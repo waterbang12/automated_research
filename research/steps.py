@@ -215,7 +215,7 @@ def checks(m: Memory, run: dict, work_dir: Path | None, domain) -> list[dict]:
         gap = (best["test_score"] - best["val_score"]) * (1 if domain.higher_is_better else -1)
         nval = _count_lines(work_dir / "data" / "private" / "val_y.csv") if work_dir else None
         se = ((best["val_score"] * (1 - best["val_score"]) / nval) ** 0.5
-              if nval and 0 <= best["val_score"] <= 1 else None)
+              if nval and domain.metric.lower() == "accuracy" and 0 <= best["val_score"] <= 1 else None)
         worse = se is not None and gap < -2 * se * 2 ** 0.5
         add("val_test", "Validation vs held-out test", "warn" if worse else "ok",
             f"best by validation #{best['id']}: val {best['val_score']:.4f}, test {best['test_score']:.4f} "

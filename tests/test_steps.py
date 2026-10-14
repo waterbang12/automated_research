@@ -79,6 +79,8 @@ def test_step_detail_links_exact_prompt_code_and_logs(recorded):
     prop = next(s for s in steps if s["phase"] == "propose")
     dp = S.step_detail(ctl.memory, run, prop["id"])
     assert [h["title"] for h in dp["hypotheses"]] == ["idea 1", "idea 2"] and dp["llm_calls"][0]["role"] == "researcher"
+    assert prop["detail"]["decision"]["why_these"] == "cheapest informative tests"
+    assert prop["detail"]["decision_id"]
 
 
 def test_checks(recorded, tmp_path):

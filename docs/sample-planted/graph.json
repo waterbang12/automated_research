@@ -1,0 +1,3102 @@
+{
+  "run": {
+    "id": 1,
+    "name": "planted",
+    "domain": "planted",
+    "objective": "Minimise validation RMSE predicting y from the other columns, and identify which features and what kind of structure actually drive y.",
+    "created_at": 1791974023.5511212
+  },
+  "nodes": [
+    {
+      "id": "r1:assumption:sandbox",
+      "type": "ASSUMPTION",
+      "title": "Methods are limited to one CPU, no network and the libraries in the sandbox image",
+      "summary": "",
+      "status": "accepted",
+      "confidence": null,
+      "epistemic": "constraint",
+      "details": {
+        "sandbox": {
+          "image": "autoresearch-sandbox:1",
+          "timeout_s": 120,
+          "memory": "1g",
+          "cpus": 1.0,
+          "pids": 128,
+          "network": "none",
+          "max_output_bytes": 20000
+        }
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791974023.5511212,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:assumption:threshold",
+      "type": "ASSUMPTION",
+      "title": "An improvement of at least 0.05 over the baseline is a real gain",
+      "summary": "",
+      "status": "unverified",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "min_improvement": 0.05
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791974023.5511212,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:assumption:val_proxy",
+      "type": "ASSUMPTION",
+      "title": "Validation rmse on one fixed split reflects held-out performance",
+      "summary": "Across 7 scored runs, the rank correlation between validation and held-out test rmse is 0.893. This checks the assumption; it does not prove it.",
+      "status": "consistent",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "why": "Agents only ever see validation scores; every decision is made on them.",
+        "spearman_val_test": 0.893,
+        "n_experiments": 7
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791974023.5511212,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:question:0",
+      "type": "QUESTION",
+      "title": "Minimise validation RMSE predicting y from the other columns, and identify which features and what kind of structure actually drive y.",
+      "summary": "Domain `planted`, metric: validation rmse (lower is better).",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "domain": "planted",
+        "metric": "rmse",
+        "higher_is_better": false,
+        "min_improvement": 0.05,
+        "n_val": 600
+      },
+      "source_table": "runs",
+      "source_id": 1,
+      "created_at": 1791974023.5511212,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:1",
+      "type": "EXPERIMENT",
+      "title": "Baseline run",
+      "summary": "val 2.3370, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 1,
+        "seed": 398317748,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 1,
+            "attempt": 1,
+            "code_sha256": "a99e2f934e32e903845cb5013da3834f3731a078075f2d5d248d880671aff7a8"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974023.558348,
+        "finished_at": 1791974026.3286977,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0001",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791974023.558348,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:baseline",
+      "type": "METHOD",
+      "title": "Baseline: imputed, standardised / one-hot features + ridge regression",
+      "summary": "",
+      "status": "reference",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "code_version": 1
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791974023.558348,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e1",
+      "type": "EVIDENCE",
+      "title": "Baseline val rmse 2.3370",
+      "summary": "",
+      "status": "reference",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 2.3369763225489306,
+        "test": 2.1943559358780047,
+        "n_val": 600
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791974026.3286977,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:1_0",
+      "type": "HYPOTHESIS",
+      "title": "Neural network (MLP) with a large hyperparameter search",
+      "summary": "Not proposed: It is costly at 1 CPU and 120 s, and it says little about structure until we know which features matter.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "It is costly at 1 CPU and 120 s, and it says little about structure until we know which features matter.",
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:1_1",
+      "type": "HYPOTHESIS",
+      "title": "Stacking or ensembling several model families",
+      "summary": "Not proposed: This is premature. We should first find which model family and which features work best.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "This is premature. We should first find which model family and which features work best.",
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:1_2",
+      "type": "HYPOTHESIS",
+      "title": "Target transformation (log/Box-Cox)",
+      "summary": "Not proposed: We don't know the distribution of y yet. The first runs should print summary statistics of y.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "We don't know the distribution of y yet. The first runs should print summary statistics of y.",
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:round:1",
+      "type": "DECISION",
+      "title": "Round 1: HistGradientBoosting with one-hot group plus permutation importance diagnostics; Spline GAM with group\u00d7x intera",
+      "summary": "H1 is a flexible nonlinear model with diagnostics. It shows which features matter and how much gain flexibility brings. H2 is a structured, interpretable model with group\u00d7x interactions and splines that leaves out the noise columns. Comparing the two tells us whether the signal is mostly additive and smooth with group-specific slopes, or needs tree-style interactions.",
+      "status": "proceed",
+      "confidence": null,
+      "epistemic": "recorded",
+      "details": {
+        "before": "So far the only result is the baseline (#1, RMSE 2.337). I don't know what model it used, which features matter, or what the noise floor is. Nothing yet tells us whether the structure is linear, involves interactions, or depends on group.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:alt:1_0",
+            "title": "Neural network (MLP) with a large hyperparameter search",
+            "why_not_now": "It is costly at 1 CPU and 120 s, and it says little about structure until we know which features matter."
+          },
+          {
+            "hypothesis": "r1:alt:1_1",
+            "title": "Stacking or ensembling several model families",
+            "why_not_now": "This is premature. We should first find which model family and which features work best."
+          },
+          {
+            "hypothesis": "r1:alt:1_2",
+            "title": "Target transformation (log/Box-Cox)",
+            "why_not_now": "We don't know the distribution of y yet. The first runs should print summary statistics of y."
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e1"
+        ],
+        "affected": [
+          "r1:hyp:1",
+          "r1:hyp:2"
+        ],
+        "why": "H1 is a flexible nonlinear model with diagnostics. It shows which features matter and how much gain flexibility brings. H2 is a structured, interpretable model with group\u00d7x interactions and splines that leaves out the noise columns. Comparing the two tells us whether the signal is mostly additive and smooth with group-specific slopes, or needs tree-style interactions.",
+        "assumptions": [
+          "The columns named noise1\u2013noise6 are probably irrelevant, but this has to be checked from the data, not assumed from their names.",
+          "The group column may change the intercept or the slopes and should be one-hot encoded.",
+          "A 5-fold CV RMSE on train is a reasonable stand-in for validation RMSE."
+        ],
+        "uncertain": [
+          "Whether y depends nonlinearly on x1\u2013x4 or through interactions between them.",
+          "Whether group changes the effect of the x features.",
+          "How much of the 2.337 is irreducible noise."
+        ],
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:1",
+            "title": "HistGradientBoosting with one-hot group plus permutation importance diagnostics",
+            "rationale": "The baseline (#1) is probably a simple model. A tuned boosted-tree model can capture nonlinearities and interactions, and permutation importance and partial dependence show which features drive y."
+          },
+          {
+            "hypothesis": "r1:hyp:2",
+            "title": "Spline GAM with group\u00d7x interactions, noise columns dropped",
+            "rationale": "If y is a smooth additive function of x1\u2013x4 whose effects depend on group, a structured linear-in-basis model will beat trees on about 1800 rows. Its coefficients also show the structure directly. This tests a different structural hypothesis from H1, using the same baseline (#1) as reference."
+          }
+        ],
+        "provenance": "recorded: the researcher's decision record for this round, written when it proposed these hypotheses"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:1_0",
+      "type": "OPEN_QUESTION",
+      "title": "Whether y depends nonlinearly on x1\u2013x4 or through interactions between them.",
+      "summary": "Raised in round 1; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:1_1",
+      "type": "OPEN_QUESTION",
+      "title": "Whether group changes the effect of the x features.",
+      "summary": "Raised in round 1; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:1_2",
+      "type": "OPEN_QUESTION",
+      "title": "How much of the 2.337 is irreducible noise.",
+      "summary": "Raised in round 1; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 1,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 1,
+      "created_at": 1791974049.346535,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:1",
+      "type": "HYPOTHESIS",
+      "title": "HistGradientBoosting with one-hot group plus permutation importance diagnostics",
+      "summary": "The baseline (#1) is probably a simple model.",
+      "status": "supported_not_best",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "rationale": "The baseline (#1) is probably a simple model. A tuned boosted-tree model can capture nonlinearities and interactions, and permutation importance and partial dependence show which features drive y.",
+        "expected_metric": 1.6,
+        "falsified_if": "Validation RMSE is at or above 2.2, i.e. no meaningful gain over the 2.337 baseline.",
+        "priority": 0.9,
+        "parent_experiment_ids": [
+          1
+        ],
+        "researcher_call": 1,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 1,
+      "created_at": 1791974049.347882,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h1",
+      "type": "METHOD",
+      "title": "Method: HistGradientBoosting with one-hot group plus permutation importance diagnostics",
+      "summary": "Load the data and one-hot encode group, with median imputation for any missing values. Print summary statistics of y and the correlation of each feature with y. Fit HistGradientBoostingRegressor (seed from SEED) and run a small 5-fold CV grid over learning_rate {0.03, 0.1}, max_leaf_nodes {15, 31} and min_samples_leaf {10, 30}, with max_iter 1000 and early stopping. Print the CV RMSE for each setting. Refit the best setting on all of train. Compute permutation importance on a 20% holdout and print it for every feature. Then refit using only the features whose importance is clearly above zero, compare its CV RMSE, and use whichever variant has the lower CV RMSE to predict val and test.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load the data and one-hot encode group, with median imputation for any missing values. Print summary statistics of y and the correlation of each feature with y. Fit HistGradientBoostingRegressor (seed from SEED) and run a small 5-fold CV grid over learning_rate {0.03, 0.1}, max_leaf_nodes {15, 31} and min_samples_leaf {10, 30}, with max_iter 1000 and early stopping. Print the CV RMSE for each setting. Refit the best setting on all of train. Compute permutation importance on a 20% holdout and print it for every feature. Then refit using only the features whose importance is clearly above zero, compare its CV RMSE, and use whichever variant has the lower CV RMSE to predict val and test.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 1,
+      "created_at": 1791974049.347882,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:2",
+      "type": "HYPOTHESIS",
+      "title": "Spline GAM with group\u00d7x interactions, noise columns dropped",
+      "summary": "If y is a smooth additive function of x1\u2013x4 whose effects depend on group, a structured linear-in-basis model will beat trees on about 1800 rows.",
+      "status": "supported",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "If y is a smooth additive function of x1\u2013x4 whose effects depend on group, a structured linear-in-basis model will beat trees on about 1800 rows. Its coefficients also show the structure directly. This tests a different structural hypothesis from H1, using the same baseline (#1) as reference.",
+        "expected_metric": 1.7,
+        "falsified_if": "The best variant's validation RMSE is above 2.1, or adding the noise columns lowers CV RMSE by more than 2%.",
+        "priority": 0.8,
+        "parent_experiment_ids": [
+          1
+        ],
+        "researcher_call": 1,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 2,
+      "created_at": 1791974049.3495765,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h2",
+      "type": "METHOD",
+      "title": "Method: Spline GAM with group\u00d7x interactions, noise columns dropped",
+      "summary": "Use only x1\u2013x4 and a one-hot encoding of group. Build SplineTransformer features (n_knots 6, degree 3) for each x, plus pairwise products x_i*x_j, plus interactions of every group dummy with the raw x's and their spline bases. Fit RidgeCV with alphas on a log grid from 1e-3 to 1e3. Using 5-fold CV, compare four variants: (a) additive splines only, (b) + group intercepts, (c) + group\u00d7x interactions, (d) + pairwise x products. Also run variant (c) with noise1\u2013noise6 added, to test whether they help. Print the CV RMSE of every variant and the largest coefficients. Predict val and test with the variant that has the best CV RMSE.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Use only x1\u2013x4 and a one-hot encoding of group. Build SplineTransformer features (n_knots 6, degree 3) for each x, plus pairwise products x_i*x_j, plus interactions of every group dummy with the raw x's and their spline bases. Fit RidgeCV with alphas on a log grid from 1e-3 to 1e3. Using 5-fold CV, compare four variants: (a) additive splines only, (b) + group intercepts, (c) + group\u00d7x interactions, (d) + pairwise x products. Also run variant (c) with noise1\u2013noise6 added, to test whether they help. Print the CV RMSE of every variant and the largest coefficients. Predict val and test with the variant that has the best CV RMSE.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 2,
+      "created_at": 1791974049.3495765,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:2",
+      "type": "EXPERIMENT",
+      "title": "#2 HistGradientBoosting with one-hot group plus permutation importance diagnostics",
+      "summary": "val 0.8133, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 2,
+        "seed": 1731610864,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 2,
+            "attempt": 1,
+            "code_sha256": "8b5df4de529d5bad1fe139fae6fb8902e39532709d11b3e300fdde8ad0f1a837"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974049.3539712,
+        "finished_at": 1791974147.4399812,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0002",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791974049.3539712,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:3",
+      "type": "EXPERIMENT",
+      "title": "#3 Spline GAM with group\u00d7x interactions, noise columns dropped",
+      "summary": "val 0.5898, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 3,
+        "seed": 185804118,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 3,
+            "attempt": 1,
+            "code_sha256": "5a334b2eafa7b27cac459febc24c689cf59c94a681dbe2393569c758545450d8"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974049.3797297,
+        "finished_at": 1791974113.1264913,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0003",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791974049.3797297,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:conclusion:e3",
+      "type": "CONCLUSION",
+      "title": "Current best: Spline GAM with group\u00d7x interactions, noise columns dropped (val 0.5898)",
+      "summary": "Held-out test 0.5890. Provisional: holds until a better result arrives, and rests on the run's assumptions.",
+      "status": "superseded",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "experiment": 3,
+        "val": 0.5897950839315301,
+        "test": 0.5889811462834527
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791974113.1264913,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e3",
+      "type": "DECISION",
+      "title": "Adopt: Spline GAM with group\u00d7x interactions, noise columns dropped",
+      "summary": "Best validation rmse so far; it becomes the current best method.",
+      "status": "adopt",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val rmse 1.7000. Best before this result: baseline 2.3370.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:1",
+            "title": "HistGradientBoosting with one-hot group plus permutation importance diagnostics"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e3"
+        ],
+        "affected": [
+          "r1:hyp:2"
+        ],
+        "why": "Best validation rmse so far; it becomes the current best method.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:3",
+            "title": "Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+            "rationale": "In #3, the group\u00d7x terms added variance, and x2*x3 is the dominant interaction. Dropping the other pairwise products and all group\u00d7x terms should match or beat 0.59 with about 30 features instead of 149, and it confirms which terms actually matter."
+          },
+          {
+            "hypothesis": "r1:hyp:4",
+            "title": "Tensor-product spline in (x2,x3) + residual GBM structure check",
+            "rationale": "#3 found that a bilinear x2*x3 term explains most of the gain. If the true interaction is curved (e.g. sin(x2)*x3 or x2*x3^2), a tensor-product spline basis will capture it and reduce RMSE below 0.59. Fitting a boosted model to the residuals will show whether any structure is left, including in the noise columns."
+          },
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Per-feature ablation and smoothness tuning of the parsimonious GAM",
+            "rationale": "#4 used the same 8-knot spline for every x and never tested whether x1 or x4 matter on their own terms, or whether a linear term would be enough. If marginal smoothness is wrong in either direction (overfitting wiggles or underfitting a sharp shape), choosing it per feature should cut RMSE and show which features actually drive y."
+          },
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "ARD Gaussian process on GAM residuals to find leftover interactions",
+            "rationale": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects. A GP with an ARD RBF kernel over all four x's, fitted to the GAM residuals, picks up any smooth leftover interaction, including ones involving x1 or x4. Its learned length-scales show which features carry that leftover signal, and the fitted WhiteKernel noise level gives an estimate of the noise floor."
+          }
+        ],
+        "uncertain": [
+          "Only one candidate has beaten the baseline so far."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791974113.1264913,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e3",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.5898 (+1.7472 vs baseline)",
+      "summary": "Held-out test 0.5890 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.5897950839315301,
+        "test": 0.5889811462834527,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.7471812386174004,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The headline result clearly beats the baseline, but the stated mechanism is mostly not what produced it. Validation RMSE was 0.5898, against a baseline of 2.3370 and a prediction of 1.7. That is a gain of 1.747, far above the 0.05 threshold. Cross-validation RMSE of the chosen variant was 0.6031 with a fold sd of 0.067, so validation agrees with CV and there is no sign of overfitting or leakage.\n\nThe ablation shows where the gain came from:\n- Additive splines only (a): 2.396. This is about the same as the baseline, so smooth additive effects alone are no better than the trees.\n- Adding group intercepts (b): 2.189. A modest gain.\n- Adding group\u00d7x interactions (c): 2.372. This is worse than (b), and the fold sd rose from 0.33 to 0.55. In the additive setting the group\u00d7x terms add variance, not signal.\n- Adding pairwise x products (d): 0.603. This cuts error by about 75%, and the top standardized coefficient is x2*x3 at +1.88, about 4\u00d7 the next largest.\n\nSo y is not additive. The x2\u00d7x3 interaction dominates, with nonlinear x1 effects (spline coefficients about \u00b10.46) and smaller nonlinear x4 effects next. The group-specific x1 spline coefficients are similar across A, B and C (s(x1)_5 is about +0.22 in all three groups). That suggests a shared x1 shape rather than real group dependence.\n\nThe variants were cumulative, so (d) still contains the group\u00d7x terms. Whether they help once the pairwise products are present was not isolated. Dropping the noise columns is supported: adding noise1\u20136 to (c) changed RMSE by only +0.006. Overall, the hypothesis is supported in the sense that a structured basis model beats the trees, but its stated reasons (additive effects that depend on group) are refuted. The real driver is a multiplicative x2\u00b7x3 term.",
+        "analyst_lessons": [
+          "An explicit x2*x3 product term is the main driver. Adding pairwise products cut CV RMSE from 2.37 to 0.60, and x2*x3 has a standardized coefficient of 1.88, about 4\u00d7 any other term. Every future model should include x2*x3 explicitly.",
+          "y is not additive. Additive splines alone (2.40 CV) and the tree baseline (2.34) perform about the same, so both miss the interaction.",
+          "Group\u00d7x interactions hurt in the additive model: 2.19 \u2192 2.37 CV, with fold sd rising 0.33 \u2192 0.55. The group-specific x1 spline coefficients are nearly the same across A, B and C. Run an ablation of d without the group\u00d7x terms; it will likely match or beat 0.603 with far fewer than 149 features.",
+          "Group intercepts are worth about 0.2 RMSE (2.40 \u2192 2.19) and should be kept.",
+          "noise1\u20136 carry no signal (+0.006 RMSE when added). Keep dropping them.",
+          "CV is reliable here: CV RMSE of 0.603 matched validation RMSE of 0.590. 5-fold CV can be used for model selection without spending validation.",
+          "Next steps: (1) remove pairs other than x2*x3 and the group\u00d7x terms to test a compact model of s(x1) + s(x4) + x2*x3 + group; (2) test whether x2\u00b7x3 is nonlinear, for example with a spline of the product or a tensor-product spline; (3) test group\u00d7(x2*x3); (4) give the trees an engineered x2*x3 feature, or ensemble them with the GAM, to reduce the remaining roughly 0.59 RMSE."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791974113.1264913,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:2_0",
+      "type": "HYPOTHESIS",
+      "title": "Use noise1\u20136 as features",
+      "summary": "Not proposed: #3 already reached 0.59 without them, and the queued HGB permutation-importance run will show whether any of them carries signal",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "#3 already reached 0.59 without them, and the queued HGB permutation-importance run will show whether any of them carries signal",
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:2_1",
+      "type": "HYPOTHESIS",
+      "title": "Neural net / MLP on the raw features",
+      "summary": "Not proposed: The structure already looks low-dimensional and close to parametric, so a GAM with explicit terms should be more sample-efficient on 1800 rows",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "The structure already looks low-dimensional and close to parametric, so a GAM with explicit terms should be more sample-efficient on 1800 rows",
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:2_2",
+      "type": "HYPOTHESIS",
+      "title": "Symbolic search over products and ratios of all x's",
+      "summary": "Not proposed: Too early. First test whether a tensor-product residual check finds any structure beyond x2*x3",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "Too early. First test whether a tensor-product residual check finds any structure beyond x2*x3",
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:round:2",
+      "type": "DECISION",
+      "title": "Round 2: Parsimonious GAM: additive splines + x2*x3 + group intercepts only; Tensor-product spline in (x2,x3) + residual",
+      "summary": "H1 is the clean ablation that #3's lesson calls for. It strips the model down to the terms that matter and should cut variance from the 149-feature design. H2 tests whether the interaction has curvature or group dependence that a single product term misses, which is the most likely source of remaining error. It also adds a residual check over all features, including the noise columns, to find any structure still missed.",
+      "status": "proceed",
+      "confidence": null,
+      "epistemic": "recorded",
+      "details": {
+        "before": "#3 shows y is mainly an additive function of x1\u2013x4 plus a strong x2*x3 interaction. Adding pairwise products took CV RMSE from 2.37 to 0.60, and the standardized coefficient on x2*x3 is about 4\u00d7 any other term. In the additive model, group\u00d7x interactions made results worse (2.19\u21922.37 CV) and less stable across folds. We only have one experiment, so these conclusions are provisional. We also don't know the noise floor, so we can't tell how much of the remaining 0.59 can still be reduced.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:alt:2_0",
+            "title": "Use noise1\u20136 as features",
+            "why_not_now": "#3 already reached 0.59 without them, and the queued HGB permutation-importance run will show whether any of them carries signal"
+          },
+          {
+            "hypothesis": "r1:alt:2_1",
+            "title": "Neural net / MLP on the raw features",
+            "why_not_now": "The structure already looks low-dimensional and close to parametric, so a GAM with explicit terms should be more sample-efficient on 1800 rows"
+          },
+          {
+            "hypothesis": "r1:alt:2_2",
+            "title": "Symbolic search over products and ratios of all x's",
+            "why_not_now": "Too early. First test whether a tensor-product residual check finds any structure beyond x2*x3"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e3"
+        ],
+        "affected": [
+          "r1:hyp:3",
+          "r1:hyp:4"
+        ],
+        "why": "H1 is the clean ablation that #3's lesson calls for. It strips the model down to the terms that matter and should cut variance from the 149-feature design. H2 tests whether the interaction has curvature or group dependence that a single product term misses, which is the most likely source of remaining error. It also adds a residual check over all features, including the noise columns, to find any structure still missed.",
+        "assumptions": [
+          "Validation and test come from the same distribution as train, so 5-fold CV on train tracks validation RMSE",
+          "The noise columns carry no signal (#3 dropped them and still did well)",
+          "Group affects y at most through an intercept, or possibly through scaling of the x2*x3 term"
+        ],
+        "uncertain": [
+          "Whether x2*x3 is exactly bilinear or a more curved function of (x2, x3)",
+          "Whether group changes the strength of the interaction, which #3 did not test separately",
+          "How close 0.59 is to the irreducible noise"
+        ],
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:3",
+            "title": "Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+            "rationale": "In #3, the group\u00d7x terms added variance, and x2*x3 is the dominant interaction. Dropping the other pairwise products and all group\u00d7x terms should match or beat 0.59 with about 30 features instead of 149, and it confirms which terms actually matter."
+          },
+          {
+            "hypothesis": "r1:hyp:4",
+            "title": "Tensor-product spline in (x2,x3) + residual GBM structure check",
+            "rationale": "#3 found that a bilinear x2*x3 term explains most of the gain. If the true interaction is curved (e.g. sin(x2)*x3 or x2*x3^2), a tensor-product spline basis will capture it and reduce RMSE below 0.59. Fitting a boosted model to the residuals will show whether any structure is left, including in the noise columns."
+          }
+        ],
+        "provenance": "recorded: the researcher's decision record for this round, written when it proposed these hypotheses"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:2_0",
+      "type": "OPEN_QUESTION",
+      "title": "Whether x2*x3 is exactly bilinear or a more curved function of (x2, x3)",
+      "summary": "Raised in round 2; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:2_1",
+      "type": "OPEN_QUESTION",
+      "title": "Whether group changes the strength of the interaction, which #3 did not test separately",
+      "summary": "Raised in round 2; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:2_2",
+      "type": "OPEN_QUESTION",
+      "title": "How close 0.59 is to the irreducible noise",
+      "summary": "Raised in round 2; later rounds did not repeat it, so it may be resolved.",
+      "status": "raised_earlier",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 2,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 2,
+      "created_at": 1791974137.2304611,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:3",
+      "type": "HYPOTHESIS",
+      "title": "Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+      "summary": "In #3, the group\u00d7x terms added variance, and x2*x3 is the dominant interaction.",
+      "status": "supported",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "In #3, the group\u00d7x terms added variance, and x2*x3 is the dominant interaction. Dropping the other pairwise products and all group\u00d7x terms should match or beat 0.59 with about 30 features instead of 149, and it confirms which terms actually matter.",
+        "expected_metric": 0.57,
+        "falsified_if": "Best variant's validation RMSE > 0.62, or variant (b) has CV RMSE more than 0.03 worse than (c). The latter would mean other pairwise products matter.",
+        "priority": 0.85,
+        "parent_experiment_ids": [
+          3
+        ],
+        "researcher_call": 5,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 3,
+      "created_at": 1791974137.2316046,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h3",
+      "type": "METHOD",
+      "title": "Method: Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+      "summary": "Use x1\u2013x4 and one-hot group; drop the noise columns. Features: SplineTransformer(n_knots=8, degree=3) on each of x1\u2013x4, raw x2*x3, and group dummies. Fit RidgeCV with alphas logspace(-4,3,30). Run 5-fold CV (seeded) on 4 variants: (a) splines + x2*x3; (b) (a) + group dummies; (c) (b) + all 6 pairwise products; (d) (b) + group\u00d7(x2*x3). Print CV mean and sd for each, plus coefficients for the product and group terms. Refit the variant with the best CV on all of train and predict val/test.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Use x1\u2013x4 and one-hot group; drop the noise columns. Features: SplineTransformer(n_knots=8, degree=3) on each of x1\u2013x4, raw x2*x3, and group dummies. Fit RidgeCV with alphas logspace(-4,3,30). Run 5-fold CV (seeded) on 4 variants: (a) splines + x2*x3; (b) (a) + group dummies; (c) (b) + all 6 pairwise products; (d) (b) + group\u00d7(x2*x3). Print CV mean and sd for each, plus coefficients for the product and group terms. Refit the variant with the best CV on all of train and predict val/test.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 3,
+      "created_at": 1791974137.2316046,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:4",
+      "type": "HYPOTHESIS",
+      "title": "Tensor-product spline in (x2,x3) + residual GBM structure check",
+      "summary": "#3 found that a bilinear x2*x3 term explains most of the gain.",
+      "status": "supported",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "#3 found that a bilinear x2*x3 term explains most of the gain. If the true interaction is curved (e.g. sin(x2)*x3 or x2*x3^2), a tensor-product spline basis will capture it and reduce RMSE below 0.59. Fitting a boosted model to the residuals will show whether any structure is left, including in the noise columns.",
+        "expected_metric": 0.55,
+        "falsified_if": "Tensor-product model's CV RMSE is not at least 0.02 below the x2*x3-only model, and the residual HGB R\u00b2 < 0.02. That would mean the bilinear interaction is sufficient and the remaining error is noise. Also falsified if validation RMSE > 0.60.",
+        "priority": 0.7,
+        "parent_experiment_ids": [
+          3
+        ],
+        "researcher_call": 5,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 4,
+      "created_at": 1791974137.2325878,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h4",
+      "type": "METHOD",
+      "title": "Method: Tensor-product spline in (x2,x3) + residual GBM structure check",
+      "summary": "Drop noise columns for the main model. Base: per-variable splines on x1, x4 (n_knots 8) and group dummies. Interaction: the row-wise outer product of SplineTransformer(n_knots=6, degree=3) bases for x2 and x3 (about 64 columns), plus raw x2*x3. Fit RidgeCV (alphas logspace(-3,3,25)). Compare 5-fold CV against the same model with x2*x3 only in place of the tensor block. Then fit HistGradientBoosting (max_depth 3, 200 iters, lr 0.05) to out-of-fold residuals using ALL features (including noise1\u20136 and group codes). Print residual-model CV R\u00b2 and permutation importances. If residual R\u00b2 > 0.05, add the HGB residual correction (out-of-fold-validated) to the final predictions; otherwise use the better ridge model alone.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Drop noise columns for the main model. Base: per-variable splines on x1, x4 (n_knots 8) and group dummies. Interaction: the row-wise outer product of SplineTransformer(n_knots=6, degree=3) bases for x2 and x3 (about 64 columns), plus raw x2*x3. Fit RidgeCV (alphas logspace(-3,3,25)). Compare 5-fold CV against the same model with x2*x3 only in place of the tensor block. Then fit HistGradientBoosting (max_depth 3, 200 iters, lr 0.05) to out-of-fold residuals using ALL features (including noise1\u20136 and group codes). Print residual-model CV R\u00b2 and permutation importances. If residual R\u00b2 > 0.05, add the HGB residual correction (out-of-fold-validated) to the final predictions; otherwise use the better ridge model alone.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 4,
+      "created_at": 1791974137.2325878,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:4",
+      "type": "EXPERIMENT",
+      "title": "#4 Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+      "summary": "val 0.5649, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 4,
+        "seed": 3305968095,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 4,
+            "attempt": 1,
+            "code_sha256": "0332cdb065a5589eff2393a373e809a426f29b64e8fd69758124b529d8b829e6"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974137.240265,
+        "finished_at": 1791974190.0876954,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0004",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791974137.240265,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e2",
+      "type": "DECISION",
+      "title": "Deprioritize: HistGradientBoosting with one-hot group plus permutation importance diagnostics",
+      "summary": "Beat the baseline but trails the current best #3 (0.5898). A benchmark ranking, not a refutation.",
+      "status": "deprioritize",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "before": "Predicted val rmse 1.6000. Best before this result: #3 0.5898.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:2",
+            "title": "Spline GAM with group\u00d7x interactions, noise columns dropped"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e2"
+        ],
+        "affected": [
+          "r1:hyp:1"
+        ],
+        "why": "Beat the baseline but trails the current best #3 (0.5898). A benchmark ranking, not a refutation.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "ARD Gaussian process on GAM residuals to find leftover interactions",
+            "rationale": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects. A GP with an ARD RBF kernel over all four x's, fitted to the GAM residuals, picks up any smooth leftover interaction, including ones involving x1 or x4. Its learned length-scales show which features carry that leftover signal, and the fitted WhiteKernel noise level gives an estimate of the noise floor."
+          }
+        ],
+        "uncertain": [],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791974147.4399812,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e2",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.8133 (+1.5237 vs baseline)",
+      "summary": "Held-out test 0.7420 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.8133231955194484,
+        "test": 0.7419799588356503,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.5236531270294822,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The tuned HistGradientBoosting model reached a validation RMSE of 0.8133. The baseline was 2.3370, so that is an improvement of 1.52, far above the 0.05 success threshold. It also beat the predicted 1.6. So the evidence supports the hypothesis as stated. However, it did not beat the best result before this experiment (0.5898). It is 0.22 RMSE worse, so it is not a new best.\n\nValidation RMSE (0.8133) closely matches the CV RMSE of the selected model (0.8101), so CV is a reliable proxy here.\n\nWhat the diagnostics showed:\n1. **Nonlinear effects.** x2 and x3 have almost no linear correlation with y (-0.015 and +0.034). Yet they have the second- and third-highest permutation importance (1.49 and 1.51 RMSE increase, behind x1 at 2.25). Their effect on y is therefore strongly nonlinear or depends on interactions with other features, which linear correlation cannot see.\n2. **Noise features.** All six noise columns have importance within about \u00b10.007, inside their standard errors, so they are pure noise. They also have about 5% missing values. Dropping them improved CV RMSE from 0.9334 to 0.8101 (-0.12). That is the largest single gain within this experiment.\n3. **Regularisation.** Heavier regularisation helped consistently. min_samples_leaf=30 beat 10 in every pairing (by 0.13\u20130.19). 15 leaves beat 31 (by 0.07\u20130.13). Learning rate barely mattered (0.9334 vs 0.9427 at the best setting). The data has 1800 rows and the trees tend to overfit, so the optimum may lie beyond the grid (min_samples_leaf above 30, fewer leaves).\n4. **Group** matters (importance 0.70), and so does x4 (0.58).\n\nThe remaining gap to the best result (0.59) suggests that piecewise-constant trees approximate a smooth or structured signal poorly. A model with explicit nonlinear or interaction terms in x2 and x3 would probably do better.",
+        "analyst_lessons": [
+          "Drop noise1\u2013noise6: their permutation importance is about 0 (|imp| \u2264 0.007) and removing them cut GBM CV RMSE from 0.933 to 0.810.",
+          "x2 and x3 have near-zero linear correlation with y (|r| < 0.04) but high permutation importance (about 1.5 each). Their effect is nonlinear or depends on interactions, so add explicit transforms such as x2*x3, x2^2, x3^2, sin/cos terms or splines, or check partial dependence and 2-D interaction plots.",
+          "On this data, boosted trees improve with stronger regularisation: min_samples_leaf=30 beat 10 by 0.13\u20130.19 RMSE, and 15 leaves beat 31. If trees are tried again, test min_samples_leaf of 50\u2013100 and 7\u201315 leaves.",
+          "Learning rate (0.03 vs 0.1) made little difference (<0.01 RMSE) with early stopping, so it is not worth tuning further.",
+          "5-fold CV RMSE (0.810) matched validation RMSE (0.813), so CV can be trusted for model selection here.",
+          "Tree GBM with feature selection reached 0.813, still 0.22 worse than the best of 0.590. Next experiments should focus on structured or smooth models (feature-engineered linear models, GAMs or splines, group interactions) using only x1\u2013x4 and group, rather than more tree tuning."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791974147.4399812,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:5",
+      "type": "EXPERIMENT",
+      "title": "#5 Tensor-product spline in (x2,x3) + residual GBM structure check",
+      "summary": "val 0.5308, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 5,
+        "seed": 2536552796,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 5,
+            "attempt": 1,
+            "code_sha256": "481b970f7e93e25f043fda90b57f2ee13238eaed298cf5257fbf9bb302f8b307"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974147.4461453,
+        "finished_at": 1791974204.7462077,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0005",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791974147.4461453,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:conclusion:e4",
+      "type": "CONCLUSION",
+      "title": "Current best: Parsimonious GAM: additive splines + x2*x3 + group intercepts only (val 0.5649)",
+      "summary": "Held-out test 0.5691. Provisional: holds until a better result arrives, and rests on the run's assumptions.",
+      "status": "superseded",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "experiment": 4,
+        "val": 0.5649224214336401,
+        "test": 0.5690735845852178
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791974190.0876954,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e4",
+      "type": "DECISION",
+      "title": "Adopt: Parsimonious GAM: additive splines + x2*x3 + group intercepts only",
+      "summary": "Best validation rmse so far, ahead of #3 by 0.0249; it becomes the current best method.",
+      "status": "adopt",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val rmse 0.5700. Best before this result: #3 0.5898.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:4",
+            "title": "Tensor-product spline in (x2,x3) + residual GBM structure check"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e4"
+        ],
+        "affected": [
+          "r1:hyp:3"
+        ],
+        "why": "Best validation rmse so far, ahead of #3 by 0.0249; it becomes the current best method.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Per-feature ablation and smoothness tuning of the parsimonious GAM",
+            "rationale": "#4 used the same 8-knot spline for every x and never tested whether x1 or x4 matter on their own terms, or whether a linear term would be enough. If marginal smoothness is wrong in either direction (overfitting wiggles or underfitting a sharp shape), choosing it per feature should cut RMSE and show which features actually drive y."
+          },
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "ARD Gaussian process on GAM residuals to find leftover interactions",
+            "rationale": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects. A GP with an ARD RBF kernel over all four x's, fitted to the GAM residuals, picks up any smooth leftover interaction, including ones involving x1 or x4. Its learned length-scales show which features carry that leftover signal, and the fitted WhiteKernel noise level gives an estimate of the noise floor."
+          }
+        ],
+        "uncertain": [
+          "The lead over #3 is within noise (unpaired z=0.87)."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791974190.0876954,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e4",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.5649 (+1.7721 vs baseline)",
+      "summary": "Held-out test 0.5691 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.5649224214336401,
+        "test": 0.5690735845852178,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.7720539011152905,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The hypothesis was that a simple GAM (additive splines on x1\u2013x4, plus raw x2*x3, plus group intercepts) would match or beat 0.59 with far fewer features than #3's 149. Validation RMSE was 0.5649, close to the predicted 0.57 and 0.025 better than the previous best of 0.5898. That gain over the previous best is below the 0.05 threshold. The 'success' label comes from the 1.77 improvement over the 2.337 baseline. The model has 44 features, not about 30: the splines produce 40 columns (10 per variable) instead of the expected roughly 26, but this is still about 3.4 times fewer than #3.\n\nWhat each part did:\n(1) Group intercepts matter most. Adding them to splines plus x2*x3 cut CV RMSE from 1.170 to 0.545 (R2 from 0.873 to 0.972). The group effects are roughly A -0.13, B +1.31, C -1.15 on the raw scale.\n(2) The other five pairwise products add nothing. CV RMSE was 0.5463 vs 0.5448, all their raw coefficients are 0.043 or smaller, and the x2*x3 coefficient did not move (1.974).\n(3) Letting the x2*x3 slope vary by group adds nothing. CV RMSE was identical (0.5448, sd 0.027). The group-specific slopes came out nearly equal (1.008, 0.980, 1.001), and ridge simply split the roughly 2.0 total slope between the shared and per-group terms. This means the slope is the same in every group, about 1.97.\n(4) CV RMSE for variant b (0.545 \u00b1 0.026) is consistent with validation RMSE (0.565), so there is no sign of overfitting.\nThe likely true model is additive smooth effects plus about 1.97\u00b7x2\u00b7x3 plus a group shift. The remaining error, about 0.55, may be close to the noise floor.",
+        "analyst_lessons": [
+          "Group intercepts are the most important term: CV RMSE drops from 1.17 to 0.545 when they are added, so every model should include them.",
+          "x2*x3 is the only interaction that matters (raw coefficient about 1.97, stable across variants). The other pairwise products have coefficients of 0.043 or smaller and do not improve CV, so drop them.",
+          "Group-specific x2*x3 slopes come out nearly equal (about 1.0 each when split with the shared term) and CV is unchanged, so the slope does not depend on group. Do not add group\u00d7x terms.",
+          "44 features (splines with 8 knots and degree 3 make 10 columns per variable, plus x2*x3 and group dummies) beat 149 features (0.565 vs 0.590 validation RMSE). Fewer features generalized better here.",
+          "CV RMSE of 0.545 \u00b1 0.026 versus 0.565 on validation suggests the remaining error is close to irreducible noise. Further gains are likely to be smaller than the 0.05 threshold. Cheap remaining checks: tune the number of spline knots and per-feature smoothing, or test whether any x1\u2013x4 spline is actually linear.",
+          "Gain over the previous best (0.025) was below the 0.05 threshold, so judge future experiments against the best result so far, not the 2.337 baseline."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791974190.0876954,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:conclusion:e5",
+      "type": "CONCLUSION",
+      "title": "Current best: Tensor-product spline in (x2,x3) + residual GBM structure check (val 0.5308)",
+      "summary": "Held-out test 0.5592. Provisional: holds until a better result arrives, and rests on the run's assumptions.",
+      "status": "superseded",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "experiment": 5,
+        "val": 0.5307858332973909,
+        "test": 0.5591945572206011
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791974204.7462077,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e5",
+      "type": "DECISION",
+      "title": "Adopt: Tensor-product spline in (x2,x3) + residual GBM structure check",
+      "summary": "Best validation rmse so far, ahead of #4 by 0.0341; it becomes the current best method.",
+      "status": "adopt",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val rmse 0.5500. Best before this result: #4 0.5649.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:3",
+            "title": "Parsimonious GAM: additive splines + x2*x3 + group intercepts only"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e5"
+        ],
+        "affected": [
+          "r1:hyp:4"
+        ],
+        "why": "Best validation rmse so far, ahead of #4 by 0.0341; it becomes the current best method.",
+        "why_next": [],
+        "uncertain": [
+          "The lead over #4 is within noise (unpaired z=1.19)."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791974204.7462077,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e5",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.5308 (+1.8062 vs baseline)",
+      "summary": "Held-out test 0.5592 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.5307858332973909,
+        "test": 0.5591945572206011,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.8061904892515397,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "refuted",
+        "analyst_analysis": "The score improved, but not for the reason the hypothesis gave. Validation RMSE was 0.5308, against 0.5898 before this run and a baseline of 2.337, so the deterministic outcome counts as a success.\n\nThe hypothesis said a tensor-product spline in (x2,x3) would capture a curved interaction, and that idea failed:\n- **Tensor block:** 5-fold CV RMSE 4.80 (R\u00b2 \u22121.13), which is +4.26 worse than the bilinear version.\n- **Bilinear version:** splines on x1 and x4 (n_knots 8), group dummies and a raw x2\u00b7x3 term, with noise columns dropped. It reached CV RMSE 0.5389 (R\u00b2 0.973) and is the model that was kept (alpha 3.16).\n\nAn R\u00b2 of \u22121.1 for a ridge-penalised basis of about 64 columns is not a modelling result. It points to a pipeline or extrapolation bug, for example spline bases blowing up at the edges of a fold, unscaled outer products, or columns misaligned in the row-wise product. So the tensor arm doesn't really test curvature.\n\nThe residual check gives independent evidence against curvature. A boosted model fitted to the out-of-fold residuals on all features reached only R\u00b2 0.020, below the 0.05 threshold. Permutation importance for x2 was +0.012 and for x3 \u22120.004, so no meaningful x2\u2013x3 structure is left after the bilinear term. Noise columns were about zero (\u22120.008 to +0.008). The one notable signal is x4 at +0.12 importance, which may mean the x4 spline is underfit. Adding the boosted correction gave a small gain (0.5335 vs 0.5389 CV) but was not used because of the threshold.\n\nMost likely, the gain over 0.5898 comes from the spline base terms and/or dropping the noise columns, not from any form of the interaction. This run doesn't separate those two factors.",
+        "analyst_lessons": [
+          "The current best model is: splines on x1 and x4 (n_knots 8), group dummies and a raw x2*x3 term, fitted with RidgeCV and noise columns dropped. It gives CV RMSE 0.539 and validation 0.531.",
+          "A bilinear x2*x3 term looks sufficient: after it, a boosted model on the residuals finds R\u00b2 of only 0.02, with x2 and x3 permutation importances at or below 0.012. Further work on curved x2\u2013x3 interactions is unlikely to pay off.",
+          "The tensor-spline block scored CV R\u00b2 \u22121.13, which signals a bug or extrapolation problem, not a real result. Check the scale of the basis, the edge extrapolation settings and per-fold sanity before trusting high-dimensional basis expansions.",
+          "x4 is the only residual feature with real permutation importance (+0.12 R\u00b2 drop). Next, try more knots or a different basis for x4, or x4 interactions (e.g. x4*group).",
+          "Noise columns noise1\u20136 add no residual signal (importances between \u22120.008 and +0.008). Keep them excluded.",
+          "Adding the boosted residual correction improved CV RMSE by only about 0.005 (0.5389 to 0.5335). The remaining error is close to the noise floor, so expect diminishing returns below about 0.53."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791974204.7462077,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:3_0",
+      "type": "HYPOTHESIS",
+      "title": "Retune boosted trees with x2*x3 and group added as features",
+      "summary": "Not proposed: In #3 the trees did about as well as additive splines, and the queued experiment already includes a residual GBM check.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "In #3 the trees did about as well as additive splines, and the queued experiment already includes a residual GBM check.",
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:3_1",
+      "type": "HYPOTHESIS",
+      "title": "Group\u00d7x spline interactions",
+      "summary": "Not proposed: In #3 and #4 they hurt or did nothing.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "In #3 and #4 they hurt or did nothing.",
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:alt:3_2",
+      "type": "HYPOTHESIS",
+      "title": "Heavy stacking or ensembling",
+      "summary": "Not proposed: It is too early. We should find the right structure before blending models.",
+      "status": "considered",
+      "confidence": null,
+      "epistemic": "not_investigated",
+      "details": {
+        "why_not_now": "It is too early. We should find the right structure before blending models.",
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:round:3",
+      "type": "DECISION",
+      "title": "Round 3: Per-feature ablation and smoothness tuning of the parsimonious GAM; ARD Gaussian process on GAM residuals to fi",
+      "summary": "H1 measures which features matter and what shape each one takes. This answers the 'which features' part of the objective directly, and it may improve RMSE by fitting the right smoothness for each feature. H2 uses a flexible, low-bias model on the residuals to look for any interaction structure not yet captured, beyond the (x2, x3) pair the queued experiment covers. It also gives a rough estimate of the noise floor.",
+      "status": "proceed",
+      "confidence": null,
+      "epistemic": "recorded",
+      "details": {
+        "before": "Three results so far: (1) the noise columns contribute nothing (#2). (2) y depends mainly on group intercepts plus an x2*x3 product (#3, #4). (3) The x2*x3 slope does not change with group (#4). Smooth marginal effects of x1\u2013x4 add something on top of these, but we have not measured how much each one adds. The best result is 0.565 (#4). The move from 0.590 to 0.565 between #3 and #4 is about the size of the CV fold standard deviation (about 0.3\u20130.5 in #3), so the evidence that parsimony helps is weak. We don't know the noise floor. We also don't know whether any structure is still missing, such as a non-product shape in (x2, x3) or other interactions. The queued tensor-product test covers the (x2, x3) part of that question.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:alt:3_0",
+            "title": "Retune boosted trees with x2*x3 and group added as features",
+            "why_not_now": "In #3 the trees did about as well as additive splines, and the queued experiment already includes a residual GBM check."
+          },
+          {
+            "hypothesis": "r1:alt:3_1",
+            "title": "Group\u00d7x spline interactions",
+            "why_not_now": "In #3 and #4 they hurt or did nothing."
+          },
+          {
+            "hypothesis": "r1:alt:3_2",
+            "title": "Heavy stacking or ensembling",
+            "why_not_now": "It is too early. We should find the right structure before blending models."
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e2",
+          "r1:evidence:e3",
+          "r1:evidence:e4"
+        ],
+        "affected": [
+          "r1:hyp:5",
+          "r1:hyp:6"
+        ],
+        "why": "H1 measures which features matter and what shape each one takes. This answers the 'which features' part of the objective directly, and it may improve RMSE by fitting the right smoothness for each feature. H2 uses a flexible, low-bias model on the residuals to look for any interaction structure not yet captured, beyond the (x2, x3) pair the queued experiment covers. It also gives a rough estimate of the noise floor.",
+        "assumptions": [
+          "Validation data follows the same distribution as train, with the same group levels.",
+          "The explained structure is mostly additive plus x2*x3, so the remaining error may be close to irreducible noise.",
+          "Ridge-penalised splines with 8 knots are not badly mis-smoothed for every feature."
+        ],
+        "uncertain": [
+          "Do x1 and x4 each add real signal, and is either effect just linear?",
+          "Is any interaction left in the residuals other than x2*x3, for example one involving x1 or x4?",
+          "What is the noise floor? Is 0.56 already close to it?"
+        ],
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Per-feature ablation and smoothness tuning of the parsimonious GAM",
+            "rationale": "#4 used the same 8-knot spline for every x and never tested whether x1 or x4 matter on their own terms, or whether a linear term would be enough. If marginal smoothness is wrong in either direction (overfitting wiggles or underfitting a sharp shape), choosing it per feature should cut RMSE and show which features actually drive y."
+          },
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "ARD Gaussian process on GAM residuals to find leftover interactions",
+            "rationale": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects. A GP with an ARD RBF kernel over all four x's, fitted to the GAM residuals, picks up any smooth leftover interaction, including ones involving x1 or x4. Its learned length-scales show which features carry that leftover signal, and the fitted WhiteKernel noise level gives an estimate of the noise floor."
+          }
+        ],
+        "provenance": "recorded: the researcher's decision record for this round, written when it proposed these hypotheses"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:3_0",
+      "type": "OPEN_QUESTION",
+      "title": "Do x1 and x4 each add real signal, and is either effect just linear?",
+      "summary": "Raised by the researcher in the latest round.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:3_1",
+      "type": "OPEN_QUESTION",
+      "title": "Is any interaction left in the residuals other than x2*x3, for example one involving x1 or x4?",
+      "summary": "Raised by the researcher in the latest round.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:roundq:3_2",
+      "type": "OPEN_QUESTION",
+      "title": "What is the noise floor? Is 0.56 already close to it?",
+      "summary": "Raised by the researcher in the latest round.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "round": 3,
+        "text_origin": "recorded (researcher decision record)"
+      },
+      "source_table": "research_decisions",
+      "source_id": 3,
+      "created_at": 1791974222.7209287,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:5",
+      "type": "HYPOTHESIS",
+      "title": "Per-feature ablation and smoothness tuning of the parsimonious GAM",
+      "summary": "#4 used the same 8-knot spline for every x and never tested whether x1 or x4 matter on their own terms, or whether a linear term would be enough.",
+      "status": "supported",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "#4 used the same 8-knot spline for every x and never tested whether x1 or x4 matter on their own terms, or whether a linear term would be enough. If marginal smoothness is wrong in either direction (overfitting wiggles or underfitting a sharp shape), choosing it per feature should cut RMSE and show which features actually drive y.",
+        "expected_metric": 0.55,
+        "falsified_if": "The selected configuration's CV is no more than 0.005 below the CV of #4 variant (b) and val RMSE is \u2265 0.565. This would mean marginal smoothness is not a bottleneck.",
+        "priority": 0.6,
+        "parent_experiment_ids": [
+          3,
+          4
+        ],
+        "researcher_call": 11,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 5,
+      "created_at": 1791974222.725594,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h5",
+      "type": "METHOD",
+      "title": "Method: Per-feature ablation and smoothness tuning of the parsimonious GAM",
+      "summary": "Features: x1\u2013x4 and one-hot group; drop the noise columns. Base model = the #4 variant (b): per-feature SplineTransformer + raw x2*x3 + group dummies, fitted with RidgeCV(alphas=logspace(-4,3,30)). Use repeated 5-fold CV (3 repeats, seeded from SEED). (1) Leave-one-out ablation: remove the term for each of x1, x2, x3, x4 (keeping x2*x3) and report the change in CV. (2) For each feature, choose among {drop, linear, spline with n_knots 4, 6, 10, 15} by coordinate descent: 2 passes, accepting a change only if CV improves by more than 0.003. (3) Print the selected configuration, its CV mean and sd, and the fitted partial effect of each spline evaluated at 9 quantiles. (4) Check robustness: refit the selected configuration with HuberRegressor on the same design and report its CV. Use whichever of Ridge and Huber has the lower CV to refit on all of train and predict val and test.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Features: x1\u2013x4 and one-hot group; drop the noise columns. Base model = the #4 variant (b): per-feature SplineTransformer + raw x2*x3 + group dummies, fitted with RidgeCV(alphas=logspace(-4,3,30)). Use repeated 5-fold CV (3 repeats, seeded from SEED). (1) Leave-one-out ablation: remove the term for each of x1, x2, x3, x4 (keeping x2*x3) and report the change in CV. (2) For each feature, choose among {drop, linear, spline with n_knots 4, 6, 10, 15} by coordinate descent: 2 passes, accepting a change only if CV improves by more than 0.003. (3) Print the selected configuration, its CV mean and sd, and the fitted partial effect of each spline evaluated at 9 quantiles. (4) Check robustness: refit the selected configuration with HuberRegressor on the same design and report its CV. Use whichever of Ridge and Huber has the lower CV to refit on all of train and predict val and test.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 5,
+      "created_at": 1791974222.725594,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:6",
+      "type": "HYPOTHESIS",
+      "title": "ARD Gaussian process on GAM residuals to find leftover interactions",
+      "summary": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects.",
+      "status": "supported_not_best",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "rationale": "#3 and #4 show the structure is group intercepts + x2*x3 + marginal effects. A GP with an ARD RBF kernel over all four x's, fitted to the GAM residuals, picks up any smooth leftover interaction, including ones involving x1 or x4. Its learned length-scales show which features carry that leftover signal, and the fitted WhiteKernel noise level gives an estimate of the noise floor.",
+        "expected_metric": 0.54,
+        "falsified_if": "The GAM+GP CV improves by less than 0.01 over the GAM alone, and every x has an ARD length-scale above about 5 standardized units. This would mean no smooth structure is left beyond the current GAM.",
+        "priority": 0.5,
+        "parent_experiment_ids": [
+          2,
+          3,
+          4
+        ],
+        "researcher_call": 11,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 6,
+      "created_at": 1791974222.7275774,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h6",
+      "type": "METHOD",
+      "title": "Method: ARD Gaussian process on GAM residuals to find leftover interactions",
+      "summary": "Fit the #4 variant (b) model (splines with 8 knots on x1\u2013x4 + x2*x3 + group dummies, RidgeCV) and compute out-of-fold residuals with 5-fold CV. Standardize x1\u2013x4 and append group dummies scaled by 0.5. Fit a sklearn GaussianProcessRegressor on the residuals with kernel ConstantKernel*RBF(length_scale=[1]*n_features, bounds (1e-2, 1e3)) + WhiteKernel, normalize_y=True, n_restarts_optimizer=1, random_state=SEED. To keep the time limit, optimize the hyperparameters on a random subsample of 1000 rows, then refit on all rows with the kernel fixed (optimizer=None). Print the learned length-scales, where large means irrelevant, and print sqrt(WhiteKernel noise) mapped back to y units. Compute the 5-fold CV RMSE of GAM + GP-residual predictions, using fixed kernel hyperparameters inside the folds, and compare it with the GAM alone. Predict val and test with GAM + GP if CV improves by more than 0.01; otherwise use the GAM alone. Print the elapsed time.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Fit the #4 variant (b) model (splines with 8 knots on x1\u2013x4 + x2*x3 + group dummies, RidgeCV) and compute out-of-fold residuals with 5-fold CV. Standardize x1\u2013x4 and append group dummies scaled by 0.5. Fit a sklearn GaussianProcessRegressor on the residuals with kernel ConstantKernel*RBF(length_scale=[1]*n_features, bounds (1e-2, 1e3)) + WhiteKernel, normalize_y=True, n_restarts_optimizer=1, random_state=SEED. To keep the time limit, optimize the hyperparameters on a random subsample of 1000 rows, then refit on all rows with the kernel fixed (optimizer=None). Print the learned length-scales, where large means irrelevant, and print sqrt(WhiteKernel noise) mapped back to y units. Compute the 5-fold CV RMSE of GAM + GP-residual predictions, using fixed kernel hyperparameters inside the folds, and compare it with the GAM alone. Predict val and test with GAM + GP if CV improves by more than 0.01; otherwise use the GAM alone. Print the elapsed time.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 6,
+      "created_at": 1791974222.7275774,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:6",
+      "type": "EXPERIMENT",
+      "title": "#6 Per-feature ablation and smoothness tuning of the parsimonious GAM",
+      "summary": "val 0.5242, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 6,
+        "seed": 241688453,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 6,
+            "attempt": 1,
+            "code_sha256": "105d4e27d3528b5fc71417fd48a668c41ba2537bda488c77ac52ef35b7474918"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974222.7328658,
+        "finished_at": 1791974312.4977944,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0006",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791974222.7328658,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:7",
+      "type": "EXPERIMENT",
+      "title": "#7 ARD Gaussian process on GAM residuals to find leftover interactions",
+      "summary": "val 0.5453, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 7,
+        "seed": 637989362,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 7,
+            "attempt": 1,
+            "code_sha256": "b2937661fa89d520975b63a4ff156e957e75b367bf8b97cca5776b4a6318b9b2"
+          }
+        ],
+        "system_revision": "173d21d853dc",
+        "started_at": 1791974222.7512066,
+        "finished_at": 1791974316.1964993,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\planted\\exp_0007",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791974222.7512066,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:conclusion:e6",
+      "type": "CONCLUSION",
+      "title": "Current best: Per-feature ablation and smoothness tuning of the parsimonious GAM (val 0.5242)",
+      "summary": "Held-out test 0.5419. Provisional: holds until a better result arrives, and rests on the run's assumptions.",
+      "status": "current",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "experiment": 6,
+        "val": 0.5242497556363742,
+        "test": 0.5418839542692133
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791974312.4977944,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e6",
+      "type": "DECISION",
+      "title": "Adopt: Per-feature ablation and smoothness tuning of the parsimonious GAM",
+      "summary": "Best validation rmse so far, ahead of #5 by 0.0065; it becomes the current best method.",
+      "status": "adopt",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val rmse 0.5500. Best before this result: #5 0.5308.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "ARD Gaussian process on GAM residuals to find leftover interactions"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e6"
+        ],
+        "affected": [
+          "r1:hyp:5"
+        ],
+        "why": "Best validation rmse so far, ahead of #5 by 0.0065; it becomes the current best method.",
+        "why_next": [],
+        "uncertain": [
+          "The lead over #5 is within noise (unpaired z=0.23)."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791974312.4977944,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e6",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.5242 (+1.8127 vs baseline)",
+      "summary": "Held-out test 0.5419 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.5242497556363742,
+        "test": 0.5418839542692133,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.8127265669125565,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The hypothesis is supported, but the gain is small. Validation RMSE was 0.5242. That is 0.0066 better than the previous best (0.5308) and better than the predicted 0.55. It clears the success threshold easily against the 2.337 baseline. Most of that margin was already won by experiment #4, so the extra gain from tuning is marginal.\n\nIn cross-validation, the tuned model scored 0.5311 \u00b1 0.0212, down from 0.5463 \u00b1 0.0221 for the uniform 8-knot base model. The 0.015 drop is smaller than one CV standard deviation. The improvement also showed up on the validation set, though, so it probably did not come from overfitting the selection procedure.\n\n**What drives y (from the ablation):**\n- **x1 is the dominant term.** Dropping it raised CV RMSE by 1.69.\n- **x4 is the second most important.** Dropping it raised CV RMSE by 0.58.\n- **x2 and x3 add nothing on their own** once the x2*x3 product is in the model. Dropping either one slightly improved CV (by 0.003 and 0.004).\n\n**The selected model** is: x1 with an 8-knot spline, x2 and x3 dropped (their product kept), x4 with a 10-knot spline, plus the group dummies, fitted with Ridge (alpha 3.86).\n\n**What the fitted effects look like:**\n- **x1 looks like one period of a sine wave** with amplitude about 2.9. It bottoms out near -2.9 at x1 \u2248 -1.3, rises to about +2.9 at x1 \u2248 1.4, and falls back to about 1.3 at 2.7.\n- **x4 looks like a step function.** It sits flat near -1.0 for x4 below about 0.4 and flat near +1.0 above about 0.6, with a jump between 0.48 and 0.60. The spline wobbles around the jump: it dips to -1.054 at x4 = 0.38, then 1.175 at 0.60 falls back to 0.941 at 0.71. That wobble suggests a smooth spline is a poor fit for a sharp jump.\n\n**Robustness check:** HuberRegressor did not help (CV 0.5321 vs 0.5311 for Ridge), so the noise does not look heavy-tailed. The remaining error of about 0.52\u20130.53 may be close to the noise floor. The step in x4 is the most likely place left to gain.",
+        "analyst_lessons": [
+          "In the GAM, the x2 and x3 main-effect terms are redundant once x2*x3 is included. Dropping both improved CV from 0.5463 to 0.5393. Keep only the product.",
+          "Feature importance from the ablation: x1 is dominant (dropping it adds 1.69 CV RMSE) and x4 is second (adds 0.58). The group dummies remain in the model.",
+          "x1's effect looks like a sine wave with amplitude about 2.9 (minimum near x1 = -1.3, maximum near 1.4). A parametric sin/cos basis is worth trying in place of the spline.",
+          "x4's effect looks like a step from about -1 to +1, with the jump between 0.48 and 0.60, and the 10-knot spline wobbles around it. Next, try a threshold indicator 1[x4 > c] with c tuned somewhere in 0.48\u20130.60, possibly plus a light spline.",
+          "Huber gave no gain over Ridge (0.5321 vs 0.5311), so heavy-tailed noise is not the issue. Don't spend more effort on robust losses.",
+          "Remaining gains look small: tuning improved validation by only 0.0066 over the previous best, and the CV change (0.015) was smaller than the CV standard deviation (about 0.021). Treat 0.52 as close to the floor unless the x4 step is modeled more sharply.",
+          "Choosing spline smoothness per feature by coordinate descent ran fast (about 18 s) and converged within 2 passes. It is a cheap template for future structure searches."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791974312.4977944,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:open:top2_6_5",
+      "type": "OPEN_QUESTION",
+      "title": "Which is better, #6 or #5?",
+      "summary": "Their validation rmse differs by 0.0065 (unpaired z=0.23), within the noise of one split. Next useful experiment: compare both with repeated cross-validation on the training split, or several seeds.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiments": [
+          6,
+          5
+        ],
+        "comparison": {
+          "test": "unpaired normal approximation",
+          "z": 0.23
+        },
+        "suggested_experiment": "repeated CV / multi-seed comparison"
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791974312.4977944,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e7",
+      "type": "DECISION",
+      "title": "Deprioritize: ARD Gaussian process on GAM residuals to find leftover interactions",
+      "summary": "Beat the baseline but trails the current best #6 (0.5242). A benchmark ranking, not a refutation.",
+      "status": "deprioritize",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "before": "Predicted val rmse 0.5400. Best before this result: #6 0.5242.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Per-feature ablation and smoothness tuning of the parsimonious GAM"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e7"
+        ],
+        "affected": [
+          "r1:hyp:6"
+        ],
+        "why": "Beat the baseline but trails the current best #6 (0.5242). A benchmark ranking, not a refutation.",
+        "why_next": [],
+        "uncertain": [
+          "The gap to #6 is within noise (unpaired z=0.73); it may be as good."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791974316.1964993,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e7",
+      "type": "EVIDENCE",
+      "title": "val rmse 0.5453 (+1.7917 vs baseline)",
+      "summary": "Held-out test 0.5416 (never shown to agents).",
+      "status": "supports",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.5452681273004092,
+        "test": 0.5416171666787534,
+        "baseline_val": 2.3369763225489306,
+        "improvement": 1.7917081952485214,
+        "threshold": 0.05,
+        "vs_baseline": {},
+        "n_val": 600,
+        "analyst_verdict": "inconclusive",
+        "analyst_analysis": "Validation RMSE was 0.5453, which is +1.79 better than the 2.337 baseline. But it is 0.0145 worse than the previous best (0.5308), and the CV gain did not carry over to validation.\n\n**CV vs validation**\n- In 5-fold CV the GAM plus GP-on-residuals scored 0.5275, against 0.5451 for the GAM alone (gain 0.0176). That passed the 0.01 gate, so the GP was used for the final predictions.\n- On validation the GAM+GP scored 0.5453. That is about the same as the GAM's out-of-fold score (0.5466) and well above the 0.5275 CV figure.\n- The CV is optimistic. The kernel hyperparameters were tuned on 1000 rows of the full out-of-fold residuals and then held fixed inside the folds, so the tuning had already seen every fold's targets.\n\n**What the learned kernel shows**\n- Length-scales are on standardized inputs; large means the feature doesn't matter. x2 (1e3), x1 (148) and g=C (841) are effectively irrelevant. x3 (2.23) is weakly relevant.\n- Signal is concentrated in x4 (0.045) and the group-B dummy (0.0375). The group-A dummy is at 0.496.\n- An x4 length-scale of 0.045 standard deviations is extremely short for 1800 rows. That looks more like fitting noise than a smooth leftover x4 or group-B interaction.\n- The GP signal variance is only 0.125 of the normalized residual variance, and the WhiteKernel accounts for 0.871. So the residuals are about 87% noise.\n\n**Noise floor**\nThe estimated noise is 0.507 in y units. The current best (0.531) is within about 0.024 of that, so little reducible error is left. That estimate is the most reliable result here.\n\nThe hypothesis was that the GP would recover leftover interactions that improve predictions. That isn't confirmed: the gain on validation is null, or negative relative to the best model, while the diagnostics point to a possible x4 \u00d7 group-B effect. Runtime was 28 s.",
+        "analyst_lessons": [
+          "The noise floor estimated from the GP's WhiteKernel is about 0.507 RMSE in y units. The best score so far, 0.531, is only about 0.024 above it, so expect future gains of 0.02 or less.",
+          "Tuning GP hyperparameters on all out-of-fold residuals and then fixing them inside the CV folds leaks information: CV said 0.5275 but validation gave 0.5453. Tune the kernel inside each fold, or hold out data that the tuning never sees.",
+          "The GP ignored x1, x2 and group C (length-scales above 100) and concentrated on x4 (0.045) and the group-B dummy (0.0375). If anything is left to find, test an explicit x4-by-group-B spline interaction in the GAM rather than a GP.",
+          "The GP explained only about 12.5% of the residual variance, so a general nonparametric model on the residuals adds little over GAM + x2*x3 + group effects.",
+          "The GAM+GP model (0.5453 on validation) did worse than the earlier best (0.5308), so keep the earlier best as the incumbent model."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791974316.1964993,
+      "origin": "derived"
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1:question:0|assumes|r1:assumption:sandbox",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:sandbox",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791974023.5511212,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:sandbox"
+    },
+    {
+      "id": "r1:question:0|assumes|r1:assumption:threshold",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791974023.5511212,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:threshold"
+    },
+    {
+      "id": "r1:question:0|assumes|r1:assumption:val_proxy",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791974023.5511212,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:val_proxy"
+    },
+    {
+      "id": "r1:exp:1|depends_on|r1:method:baseline",
+      "src": "r1:exp:1",
+      "rel": "depends_on",
+      "dst": "r1:method:baseline",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974023.558348,
+      "origin": "derived",
+      "flow_src": "r1:method:baseline",
+      "flow_dst": "r1:exp:1"
+    },
+    {
+      "id": "r1:question:0|motivates|r1:method:baseline",
+      "src": "r1:question:0",
+      "rel": "motivates",
+      "dst": "r1:method:baseline",
+      "explanation": "Every candidate is compared with this fixed reference.",
+      "evidence": [],
+      "created_at": 1791974023.558348,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:method:baseline"
+    },
+    {
+      "id": "r1:exp:1|produces|r1:evidence:e1",
+      "src": "r1:exp:1",
+      "rel": "produces",
+      "dst": "r1:evidence:e1",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974026.3286977,
+      "origin": "derived",
+      "flow_src": "r1:exp:1",
+      "flow_dst": "r1:evidence:e1"
+    },
+    {
+      "id": "r1:round:1|depends_on|r1:evidence:e1",
+      "src": "r1:round:1",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e1",
+      "explanation": "Cited as evidence in this round's decision record.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e1",
+      "flow_dst": "r1:round:1"
+    },
+    {
+      "id": "r1:round:1|deprioritizes|r1:alt:1_0",
+      "src": "r1:round:1",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:1_0",
+      "explanation": "It is costly at 1 CPU and 120 s, and it says little about structure until we know which features matter.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:alt:1_0",
+      "flow_dst": "r1:round:1"
+    },
+    {
+      "id": "r1:round:1|deprioritizes|r1:alt:1_1",
+      "src": "r1:round:1",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:1_1",
+      "explanation": "This is premature. We should first find which model family and which features work best.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:alt:1_1",
+      "flow_dst": "r1:round:1"
+    },
+    {
+      "id": "r1:round:1|deprioritizes|r1:alt:1_2",
+      "src": "r1:round:1",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:1_2",
+      "explanation": "We don't know the distribution of y yet. The first runs should print summary statistics of y.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:alt:1_2",
+      "flow_dst": "r1:round:1"
+    },
+    {
+      "id": "r1:round:1|motivates|r1:roundq:1_0",
+      "src": "r1:round:1",
+      "rel": "motivates",
+      "dst": "r1:roundq:1_0",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:round:1",
+      "flow_dst": "r1:roundq:1_0"
+    },
+    {
+      "id": "r1:round:1|motivates|r1:roundq:1_1",
+      "src": "r1:round:1",
+      "rel": "motivates",
+      "dst": "r1:roundq:1_1",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:round:1",
+      "flow_dst": "r1:roundq:1_1"
+    },
+    {
+      "id": "r1:round:1|motivates|r1:roundq:1_2",
+      "src": "r1:round:1",
+      "rel": "motivates",
+      "dst": "r1:roundq:1_2",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974049.346535,
+      "origin": "derived",
+      "flow_src": "r1:round:1",
+      "flow_dst": "r1:roundq:1_2"
+    },
+    {
+      "id": "r1:hyp:1|inspired_by|r1:evidence:e1",
+      "src": "r1:hyp:1",
+      "rel": "inspired_by",
+      "dst": "r1:evidence:e1",
+      "explanation": "The researcher cited experiment #1 as motivation.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791974049.347882,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e1",
+      "flow_dst": "r1:hyp:1"
+    },
+    {
+      "id": "r1:hyp:1|inspired_by|r1:round:1",
+      "src": "r1:hyp:1",
+      "rel": "inspired_by",
+      "dst": "r1:round:1",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791974049.347882,
+      "origin": "derived",
+      "flow_src": "r1:round:1",
+      "flow_dst": "r1:hyp:1"
+    },
+    {
+      "id": "r1:hyp:1|proposes|r1:method:h1",
+      "src": "r1:hyp:1",
+      "rel": "proposes",
+      "dst": "r1:method:h1",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974049.347882,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:method:h1"
+    },
+    {
+      "id": "r1:hyp:2|inspired_by|r1:evidence:e1",
+      "src": "r1:hyp:2",
+      "rel": "inspired_by",
+      "dst": "r1:evidence:e1",
+      "explanation": "The researcher cited experiment #1 as motivation.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791974049.3495765,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e1",
+      "flow_dst": "r1:hyp:2"
+    },
+    {
+      "id": "r1:hyp:2|inspired_by|r1:round:1",
+      "src": "r1:hyp:2",
+      "rel": "inspired_by",
+      "dst": "r1:round:1",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791974049.3495765,
+      "origin": "derived",
+      "flow_src": "r1:round:1",
+      "flow_dst": "r1:hyp:2"
+    },
+    {
+      "id": "r1:hyp:2|proposes|r1:method:h2",
+      "src": "r1:hyp:2",
+      "rel": "proposes",
+      "dst": "r1:method:h2",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974049.3495765,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:method:h2"
+    },
+    {
+      "id": "r1:exp:2|depends_on|r1:method:h1",
+      "src": "r1:exp:2",
+      "rel": "depends_on",
+      "dst": "r1:method:h1",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974049.3539712,
+      "origin": "derived",
+      "flow_src": "r1:method:h1",
+      "flow_dst": "r1:exp:2"
+    },
+    {
+      "id": "r1:exp:2|tests|r1:hyp:1",
+      "src": "r1:exp:2",
+      "rel": "tests",
+      "dst": "r1:hyp:1",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974049.3539712,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:exp:2"
+    },
+    {
+      "id": "r1:exp:3|depends_on|r1:method:h2",
+      "src": "r1:exp:3",
+      "rel": "depends_on",
+      "dst": "r1:method:h2",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974049.3797297,
+      "origin": "derived",
+      "flow_src": "r1:method:h2",
+      "flow_dst": "r1:exp:3"
+    },
+    {
+      "id": "r1:exp:3|tests|r1:hyp:2",
+      "src": "r1:exp:3",
+      "rel": "tests",
+      "dst": "r1:hyp:2",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974049.3797297,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:exp:3"
+    },
+    {
+      "id": "r1:conclusion:e3|depends_on|r1:assumption:threshold",
+      "src": "r1:conclusion:e3",
+      "rel": "depends_on",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Counts as a gain only via the threshold.",
+      "evidence": [],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:conclusion:e3"
+    },
+    {
+      "id": "r1:conclusion:e3|depends_on|r1:assumption:val_proxy",
+      "src": "r1:conclusion:e3",
+      "rel": "depends_on",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Chosen on validation scores alone.",
+      "evidence": [],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:assumption:val_proxy",
+      "flow_dst": "r1:conclusion:e3"
+    },
+    {
+      "id": "r1:conclusion:e3|depends_on|r1:decision:e3",
+      "src": "r1:conclusion:e3",
+      "rel": "depends_on",
+      "dst": "r1:decision:e3",
+      "explanation": "Adopted by this decision.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:conclusion:e3"
+    },
+    {
+      "id": "r1:decision:e3|depends_on|r1:evidence:e3",
+      "src": "r1:decision:e3",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e3",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:decision:e3"
+    },
+    {
+      "id": "r1:decision:e3|selects|r1:hyp:2",
+      "src": "r1:decision:e3",
+      "rel": "selects",
+      "dst": "r1:hyp:2",
+      "explanation": "Best validation rmse so far; it becomes the current best method.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:decision:e3"
+    },
+    {
+      "id": "r1:evidence:e3|supports|r1:conclusion:e3",
+      "src": "r1:evidence:e3",
+      "rel": "supports",
+      "dst": "r1:conclusion:e3",
+      "explanation": "Measured result behind this conclusion.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:conclusion:e3"
+    },
+    {
+      "id": "r1:evidence:e3|supports|r1:hyp:2",
+      "src": "r1:evidence:e3",
+      "rel": "supports",
+      "dst": "r1:hyp:2",
+      "explanation": "Improvement +1.7472 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:evidence:e3"
+    },
+    {
+      "id": "r1:exp:3|produces|r1:evidence:e3",
+      "src": "r1:exp:3",
+      "rel": "produces",
+      "dst": "r1:evidence:e3",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974113.1264913,
+      "origin": "derived",
+      "flow_src": "r1:exp:3",
+      "flow_dst": "r1:evidence:e3"
+    },
+    {
+      "id": "r1:round:2|depends_on|r1:evidence:e3",
+      "src": "r1:round:2",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e3",
+      "explanation": "Cited as evidence in this round's decision record.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:round:2"
+    },
+    {
+      "id": "r1:round:2|deprioritizes|r1:alt:2_0",
+      "src": "r1:round:2",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:2_0",
+      "explanation": "#3 already reached 0.59 without them, and the queued HGB permutation-importance run will show whether any of them carries signal",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:alt:2_0",
+      "flow_dst": "r1:round:2"
+    },
+    {
+      "id": "r1:round:2|deprioritizes|r1:alt:2_1",
+      "src": "r1:round:2",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:2_1",
+      "explanation": "The structure already looks low-dimensional and close to parametric, so a GAM with explicit terms should be more sample-efficient on 1800 rows",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:alt:2_1",
+      "flow_dst": "r1:round:2"
+    },
+    {
+      "id": "r1:round:2|deprioritizes|r1:alt:2_2",
+      "src": "r1:round:2",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:2_2",
+      "explanation": "Too early. First test whether a tensor-product residual check finds any structure beyond x2*x3",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:alt:2_2",
+      "flow_dst": "r1:round:2"
+    },
+    {
+      "id": "r1:round:2|motivates|r1:roundq:2_0",
+      "src": "r1:round:2",
+      "rel": "motivates",
+      "dst": "r1:roundq:2_0",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:round:2",
+      "flow_dst": "r1:roundq:2_0"
+    },
+    {
+      "id": "r1:round:2|motivates|r1:roundq:2_1",
+      "src": "r1:round:2",
+      "rel": "motivates",
+      "dst": "r1:roundq:2_1",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:round:2",
+      "flow_dst": "r1:roundq:2_1"
+    },
+    {
+      "id": "r1:round:2|motivates|r1:roundq:2_2",
+      "src": "r1:round:2",
+      "rel": "motivates",
+      "dst": "r1:roundq:2_2",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974137.2304611,
+      "origin": "derived",
+      "flow_src": "r1:round:2",
+      "flow_dst": "r1:roundq:2_2"
+    },
+    {
+      "id": "r1:hyp:3|inspired_by|r1:decision:e3",
+      "src": "r1:hyp:3",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e3",
+      "explanation": "The researcher cited experiment #3 as motivation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974137.2316046,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:hyp:3"
+    },
+    {
+      "id": "r1:hyp:3|inspired_by|r1:round:2",
+      "src": "r1:hyp:3",
+      "rel": "inspired_by",
+      "dst": "r1:round:2",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974137.2316046,
+      "origin": "derived",
+      "flow_src": "r1:round:2",
+      "flow_dst": "r1:hyp:3"
+    },
+    {
+      "id": "r1:hyp:3|proposes|r1:method:h3",
+      "src": "r1:hyp:3",
+      "rel": "proposes",
+      "dst": "r1:method:h3",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974137.2316046,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:method:h3"
+    },
+    {
+      "id": "r1:hyp:3|refines|r1:hyp:2",
+      "src": "r1:hyp:3",
+      "rel": "refines",
+      "dst": "r1:hyp:2",
+      "explanation": "Builds on the hypothesis tested in experiment #3.",
+      "evidence": [],
+      "created_at": 1791974137.2316046,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:hyp:3"
+    },
+    {
+      "id": "r1:hyp:4|inspired_by|r1:decision:e3",
+      "src": "r1:hyp:4",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e3",
+      "explanation": "The researcher cited experiment #3 as motivation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974137.2325878,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:hyp:4"
+    },
+    {
+      "id": "r1:hyp:4|inspired_by|r1:round:2",
+      "src": "r1:hyp:4",
+      "rel": "inspired_by",
+      "dst": "r1:round:2",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974137.2325878,
+      "origin": "derived",
+      "flow_src": "r1:round:2",
+      "flow_dst": "r1:hyp:4"
+    },
+    {
+      "id": "r1:hyp:4|proposes|r1:method:h4",
+      "src": "r1:hyp:4",
+      "rel": "proposes",
+      "dst": "r1:method:h4",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974137.2325878,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:method:h4"
+    },
+    {
+      "id": "r1:hyp:4|refines|r1:hyp:2",
+      "src": "r1:hyp:4",
+      "rel": "refines",
+      "dst": "r1:hyp:2",
+      "explanation": "Builds on the hypothesis tested in experiment #3.",
+      "evidence": [],
+      "created_at": 1791974137.2325878,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:hyp:4"
+    },
+    {
+      "id": "r1:exp:4|depends_on|r1:method:h3",
+      "src": "r1:exp:4",
+      "rel": "depends_on",
+      "dst": "r1:method:h3",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974137.240265,
+      "origin": "derived",
+      "flow_src": "r1:method:h3",
+      "flow_dst": "r1:exp:4"
+    },
+    {
+      "id": "r1:exp:4|tests|r1:hyp:3",
+      "src": "r1:exp:4",
+      "rel": "tests",
+      "dst": "r1:hyp:3",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974137.240265,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:exp:4"
+    },
+    {
+      "id": "r1:decision:e2|depends_on|r1:evidence:e2",
+      "src": "r1:decision:e2",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e2",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791974147.4399812,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e2",
+      "flow_dst": "r1:decision:e2"
+    },
+    {
+      "id": "r1:decision:e2|deprioritizes|r1:hyp:1",
+      "src": "r1:decision:e2",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:1",
+      "explanation": "Beat the baseline but trails the current best #3 (0.5898). A benchmark ranking, not a refutation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791974147.4399812,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:decision:e2"
+    },
+    {
+      "id": "r1:evidence:e2|supports|r1:hyp:1",
+      "src": "r1:evidence:e2",
+      "rel": "supports",
+      "dst": "r1:hyp:1",
+      "explanation": "Improvement +1.5237 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791974147.4399812,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:evidence:e2"
+    },
+    {
+      "id": "r1:exp:2|produces|r1:evidence:e2",
+      "src": "r1:exp:2",
+      "rel": "produces",
+      "dst": "r1:evidence:e2",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974147.4399812,
+      "origin": "derived",
+      "flow_src": "r1:exp:2",
+      "flow_dst": "r1:evidence:e2"
+    },
+    {
+      "id": "r1:exp:5|depends_on|r1:method:h4",
+      "src": "r1:exp:5",
+      "rel": "depends_on",
+      "dst": "r1:method:h4",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974147.4461453,
+      "origin": "derived",
+      "flow_src": "r1:method:h4",
+      "flow_dst": "r1:exp:5"
+    },
+    {
+      "id": "r1:exp:5|tests|r1:hyp:4",
+      "src": "r1:exp:5",
+      "rel": "tests",
+      "dst": "r1:hyp:4",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974147.4461453,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:exp:5"
+    },
+    {
+      "id": "r1:conclusion:e4|depends_on|r1:assumption:threshold",
+      "src": "r1:conclusion:e4",
+      "rel": "depends_on",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Counts as a gain only via the threshold.",
+      "evidence": [],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:conclusion:e4"
+    },
+    {
+      "id": "r1:conclusion:e4|depends_on|r1:assumption:val_proxy",
+      "src": "r1:conclusion:e4",
+      "rel": "depends_on",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Chosen on validation scores alone.",
+      "evidence": [],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:assumption:val_proxy",
+      "flow_dst": "r1:conclusion:e4"
+    },
+    {
+      "id": "r1:conclusion:e4|depends_on|r1:decision:e4",
+      "src": "r1:conclusion:e4",
+      "rel": "depends_on",
+      "dst": "r1:decision:e4",
+      "explanation": "Adopted by this decision.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:decision:e4",
+      "flow_dst": "r1:conclusion:e4"
+    },
+    {
+      "id": "r1:conclusion:e4|supersedes|r1:conclusion:e3",
+      "src": "r1:conclusion:e4",
+      "rel": "supersedes",
+      "dst": "r1:conclusion:e3",
+      "explanation": "A later experiment scored higher on validation.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:conclusion:e3",
+      "flow_dst": "r1:conclusion:e4"
+    },
+    {
+      "id": "r1:decision:e4|depends_on|r1:evidence:e4",
+      "src": "r1:decision:e4",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e4",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e4",
+      "flow_dst": "r1:decision:e4"
+    },
+    {
+      "id": "r1:decision:e4|selects|r1:hyp:3",
+      "src": "r1:decision:e4",
+      "rel": "selects",
+      "dst": "r1:hyp:3",
+      "explanation": "Best validation rmse so far, ahead of #3 by 0.0249; it becomes the current best method.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:decision:e4"
+    },
+    {
+      "id": "r1:evidence:e4|supports|r1:conclusion:e4",
+      "src": "r1:evidence:e4",
+      "rel": "supports",
+      "dst": "r1:conclusion:e4",
+      "explanation": "Measured result behind this conclusion.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e4",
+      "flow_dst": "r1:conclusion:e4"
+    },
+    {
+      "id": "r1:evidence:e4|supports|r1:hyp:3",
+      "src": "r1:evidence:e4",
+      "rel": "supports",
+      "dst": "r1:hyp:3",
+      "explanation": "Improvement +1.7721 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:evidence:e4"
+    },
+    {
+      "id": "r1:exp:4|produces|r1:evidence:e4",
+      "src": "r1:exp:4",
+      "rel": "produces",
+      "dst": "r1:evidence:e4",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974190.0876954,
+      "origin": "derived",
+      "flow_src": "r1:exp:4",
+      "flow_dst": "r1:evidence:e4"
+    },
+    {
+      "id": "r1:conclusion:e5|depends_on|r1:assumption:threshold",
+      "src": "r1:conclusion:e5",
+      "rel": "depends_on",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Counts as a gain only via the threshold.",
+      "evidence": [],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:conclusion:e5"
+    },
+    {
+      "id": "r1:conclusion:e5|depends_on|r1:assumption:val_proxy",
+      "src": "r1:conclusion:e5",
+      "rel": "depends_on",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Chosen on validation scores alone.",
+      "evidence": [],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:assumption:val_proxy",
+      "flow_dst": "r1:conclusion:e5"
+    },
+    {
+      "id": "r1:conclusion:e5|depends_on|r1:decision:e5",
+      "src": "r1:conclusion:e5",
+      "rel": "depends_on",
+      "dst": "r1:decision:e5",
+      "explanation": "Adopted by this decision.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:decision:e5",
+      "flow_dst": "r1:conclusion:e5"
+    },
+    {
+      "id": "r1:conclusion:e5|supersedes|r1:conclusion:e4",
+      "src": "r1:conclusion:e5",
+      "rel": "supersedes",
+      "dst": "r1:conclusion:e4",
+      "explanation": "A later experiment scored higher on validation.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:conclusion:e4",
+      "flow_dst": "r1:conclusion:e5"
+    },
+    {
+      "id": "r1:decision:e5|depends_on|r1:evidence:e5",
+      "src": "r1:decision:e5",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e5",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e5",
+      "flow_dst": "r1:decision:e5"
+    },
+    {
+      "id": "r1:decision:e5|selects|r1:hyp:4",
+      "src": "r1:decision:e5",
+      "rel": "selects",
+      "dst": "r1:hyp:4",
+      "explanation": "Best validation rmse so far, ahead of #4 by 0.0341; it becomes the current best method.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:decision:e5"
+    },
+    {
+      "id": "r1:evidence:e5|motivates|r1:open:top2_6_5",
+      "src": "r1:evidence:e5",
+      "rel": "motivates",
+      "dst": "r1:open:top2_6_5",
+      "explanation": "Close score; the ranking is uncertain.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e5",
+      "flow_dst": "r1:open:top2_6_5"
+    },
+    {
+      "id": "r1:evidence:e5|supports|r1:conclusion:e5",
+      "src": "r1:evidence:e5",
+      "rel": "supports",
+      "dst": "r1:conclusion:e5",
+      "explanation": "Measured result behind this conclusion.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e5",
+      "flow_dst": "r1:conclusion:e5"
+    },
+    {
+      "id": "r1:evidence:e5|supports|r1:hyp:4",
+      "src": "r1:evidence:e5",
+      "rel": "supports",
+      "dst": "r1:hyp:4",
+      "explanation": "Improvement +1.8062 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:evidence:e5"
+    },
+    {
+      "id": "r1:exp:5|produces|r1:evidence:e5",
+      "src": "r1:exp:5",
+      "rel": "produces",
+      "dst": "r1:evidence:e5",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974204.7462077,
+      "origin": "derived",
+      "flow_src": "r1:exp:5",
+      "flow_dst": "r1:evidence:e5"
+    },
+    {
+      "id": "r1:round:3|depends_on|r1:evidence:e2",
+      "src": "r1:round:3",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e2",
+      "explanation": "Cited as evidence in this round's decision record.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e2",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|depends_on|r1:evidence:e3",
+      "src": "r1:round:3",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e3",
+      "explanation": "Cited as evidence in this round's decision record.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|depends_on|r1:evidence:e4",
+      "src": "r1:round:3",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e4",
+      "explanation": "Cited as evidence in this round's decision record.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e4",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|deprioritizes|r1:alt:3_0",
+      "src": "r1:round:3",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:3_0",
+      "explanation": "In #3 the trees did about as well as additive splines, and the queued experiment already includes a residual GBM check.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:alt:3_0",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|deprioritizes|r1:alt:3_1",
+      "src": "r1:round:3",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:3_1",
+      "explanation": "In #3 and #4 they hurt or did nothing.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:alt:3_1",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|deprioritizes|r1:alt:3_2",
+      "src": "r1:round:3",
+      "rel": "deprioritizes",
+      "dst": "r1:alt:3_2",
+      "explanation": "It is too early. We should find the right structure before blending models.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:alt:3_2",
+      "flow_dst": "r1:round:3"
+    },
+    {
+      "id": "r1:round:3|motivates|r1:roundq:3_0",
+      "src": "r1:round:3",
+      "rel": "motivates",
+      "dst": "r1:roundq:3_0",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:round:3",
+      "flow_dst": "r1:roundq:3_0"
+    },
+    {
+      "id": "r1:round:3|motivates|r1:roundq:3_1",
+      "src": "r1:round:3",
+      "rel": "motivates",
+      "dst": "r1:roundq:3_1",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:round:3",
+      "flow_dst": "r1:roundq:3_1"
+    },
+    {
+      "id": "r1:round:3|motivates|r1:roundq:3_2",
+      "src": "r1:round:3",
+      "rel": "motivates",
+      "dst": "r1:roundq:3_2",
+      "explanation": "Uncertainty recorded with this decision.",
+      "evidence": [],
+      "created_at": 1791974222.7209287,
+      "origin": "derived",
+      "flow_src": "r1:round:3",
+      "flow_dst": "r1:roundq:3_2"
+    },
+    {
+      "id": "r1:hyp:5|inspired_by|r1:decision:e3",
+      "src": "r1:hyp:5",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e3",
+      "explanation": "The researcher cited experiment #3 as motivation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|inspired_by|r1:decision:e4",
+      "src": "r1:hyp:5",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e4",
+      "explanation": "The researcher cited experiment #4 as motivation.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:decision:e4",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|inspired_by|r1:round:3",
+      "src": "r1:hyp:5",
+      "rel": "inspired_by",
+      "dst": "r1:round:3",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e2",
+        "r1:evidence:e3",
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:round:3",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|proposes|r1:method:h5",
+      "src": "r1:hyp:5",
+      "rel": "proposes",
+      "dst": "r1:method:h5",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:method:h5"
+    },
+    {
+      "id": "r1:hyp:5|refines|r1:hyp:2",
+      "src": "r1:hyp:5",
+      "rel": "refines",
+      "dst": "r1:hyp:2",
+      "explanation": "Builds on the hypothesis tested in experiment #3.",
+      "evidence": [],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|refines|r1:hyp:3",
+      "src": "r1:hyp:5",
+      "rel": "refines",
+      "dst": "r1:hyp:3",
+      "explanation": "Builds on the hypothesis tested in experiment #4.",
+      "evidence": [],
+      "created_at": 1791974222.725594,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:decision:e2",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e2",
+      "explanation": "The researcher cited experiment #2 as motivation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:decision:e3",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e3",
+      "explanation": "The researcher cited experiment #3 as motivation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:decision:e4",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e4",
+      "explanation": "The researcher cited experiment #4 as motivation.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:decision:e4",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:round:3",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:round:3",
+      "explanation": "Proposed in this round.",
+      "evidence": [
+        "r1:evidence:e2",
+        "r1:evidence:e3",
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:round:3",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|proposes|r1:method:h6",
+      "src": "r1:hyp:6",
+      "rel": "proposes",
+      "dst": "r1:method:h6",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:method:h6"
+    },
+    {
+      "id": "r1:hyp:6|refines|r1:hyp:1",
+      "src": "r1:hyp:6",
+      "rel": "refines",
+      "dst": "r1:hyp:1",
+      "explanation": "Builds on the hypothesis tested in experiment #2.",
+      "evidence": [],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|refines|r1:hyp:2",
+      "src": "r1:hyp:6",
+      "rel": "refines",
+      "dst": "r1:hyp:2",
+      "explanation": "Builds on the hypothesis tested in experiment #3.",
+      "evidence": [],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|refines|r1:hyp:3",
+      "src": "r1:hyp:6",
+      "rel": "refines",
+      "dst": "r1:hyp:3",
+      "explanation": "Builds on the hypothesis tested in experiment #4.",
+      "evidence": [],
+      "created_at": 1791974222.7275774,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:exp:6|depends_on|r1:method:h5",
+      "src": "r1:exp:6",
+      "rel": "depends_on",
+      "dst": "r1:method:h5",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974222.7328658,
+      "origin": "derived",
+      "flow_src": "r1:method:h5",
+      "flow_dst": "r1:exp:6"
+    },
+    {
+      "id": "r1:exp:6|tests|r1:hyp:5",
+      "src": "r1:exp:6",
+      "rel": "tests",
+      "dst": "r1:hyp:5",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974222.7328658,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:exp:6"
+    },
+    {
+      "id": "r1:exp:7|depends_on|r1:method:h6",
+      "src": "r1:exp:7",
+      "rel": "depends_on",
+      "dst": "r1:method:h6",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791974222.7512066,
+      "origin": "derived",
+      "flow_src": "r1:method:h6",
+      "flow_dst": "r1:exp:7"
+    },
+    {
+      "id": "r1:exp:7|tests|r1:hyp:6",
+      "src": "r1:exp:7",
+      "rel": "tests",
+      "dst": "r1:hyp:6",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791974222.7512066,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:exp:7"
+    },
+    {
+      "id": "r1:conclusion:e6|depends_on|r1:assumption:threshold",
+      "src": "r1:conclusion:e6",
+      "rel": "depends_on",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Counts as a gain only via the threshold.",
+      "evidence": [],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:conclusion:e6"
+    },
+    {
+      "id": "r1:conclusion:e6|depends_on|r1:assumption:val_proxy",
+      "src": "r1:conclusion:e6",
+      "rel": "depends_on",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Chosen on validation scores alone.",
+      "evidence": [],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:assumption:val_proxy",
+      "flow_dst": "r1:conclusion:e6"
+    },
+    {
+      "id": "r1:conclusion:e6|depends_on|r1:decision:e6",
+      "src": "r1:conclusion:e6",
+      "rel": "depends_on",
+      "dst": "r1:decision:e6",
+      "explanation": "Adopted by this decision.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:decision:e6",
+      "flow_dst": "r1:conclusion:e6"
+    },
+    {
+      "id": "r1:conclusion:e6|supersedes|r1:conclusion:e5",
+      "src": "r1:conclusion:e6",
+      "rel": "supersedes",
+      "dst": "r1:conclusion:e5",
+      "explanation": "A later experiment scored higher on validation.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:conclusion:e5",
+      "flow_dst": "r1:conclusion:e6"
+    },
+    {
+      "id": "r1:decision:e6|depends_on|r1:evidence:e6",
+      "src": "r1:decision:e6",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e6",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e6",
+      "flow_dst": "r1:decision:e6"
+    },
+    {
+      "id": "r1:decision:e6|selects|r1:hyp:5",
+      "src": "r1:decision:e6",
+      "rel": "selects",
+      "dst": "r1:hyp:5",
+      "explanation": "Best validation rmse so far, ahead of #5 by 0.0065; it becomes the current best method.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:decision:e6"
+    },
+    {
+      "id": "r1:evidence:e6|motivates|r1:open:top2_6_5",
+      "src": "r1:evidence:e6",
+      "rel": "motivates",
+      "dst": "r1:open:top2_6_5",
+      "explanation": "Close score; the ranking is uncertain.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e6",
+      "flow_dst": "r1:open:top2_6_5"
+    },
+    {
+      "id": "r1:evidence:e6|supports|r1:conclusion:e6",
+      "src": "r1:evidence:e6",
+      "rel": "supports",
+      "dst": "r1:conclusion:e6",
+      "explanation": "Measured result behind this conclusion.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e6",
+      "flow_dst": "r1:conclusion:e6"
+    },
+    {
+      "id": "r1:evidence:e6|supports|r1:hyp:5",
+      "src": "r1:evidence:e6",
+      "rel": "supports",
+      "dst": "r1:hyp:5",
+      "explanation": "Improvement +1.8127 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:evidence:e6"
+    },
+    {
+      "id": "r1:exp:6|produces|r1:evidence:e6",
+      "src": "r1:exp:6",
+      "rel": "produces",
+      "dst": "r1:evidence:e6",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974312.4977944,
+      "origin": "derived",
+      "flow_src": "r1:exp:6",
+      "flow_dst": "r1:evidence:e6"
+    },
+    {
+      "id": "r1:decision:e7|depends_on|r1:evidence:e7",
+      "src": "r1:decision:e7",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e7",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791974316.1964993,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e7",
+      "flow_dst": "r1:decision:e7"
+    },
+    {
+      "id": "r1:decision:e7|deprioritizes|r1:hyp:6",
+      "src": "r1:decision:e7",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:6",
+      "explanation": "Beat the baseline but trails the current best #6 (0.5242). A benchmark ranking, not a refutation.",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791974316.1964993,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:decision:e7"
+    },
+    {
+      "id": "r1:evidence:e7|supports|r1:hyp:6",
+      "src": "r1:evidence:e7",
+      "rel": "supports",
+      "dst": "r1:hyp:6",
+      "explanation": "Improvement +1.7917 meets the 0.05 threshold on one validation split.",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791974316.1964993,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:evidence:e7"
+    },
+    {
+      "id": "r1:exp:7|produces|r1:evidence:e7",
+      "src": "r1:exp:7",
+      "rel": "produces",
+      "dst": "r1:evidence:e7",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791974316.1964993,
+      "origin": "derived",
+      "flow_src": "r1:exp:7",
+      "flow_dst": "r1:evidence:e7"
+    }
+  ]
+}

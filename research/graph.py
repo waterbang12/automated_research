@@ -310,6 +310,8 @@ class Builder:
         for h in hyps:
             round_of.setdefault(h["llm_call_id"] or -h["id"], []).append(h)
         hyp_id = {h["id"]: self.nid("hyp", h["id"]) for h in hyps}
+        rounds = self.m.decisions(self.rid)
+        round_calls = {r["llm_call_id"] for r in rounds}
         # Which experiment's hypothesis a parent experiment tested, for `refines` edges.
         hyp_of_exp = {e["id"]: e["hypothesis_id"] for e in exps if e["hypothesis_id"]}
 
@@ -318,6 +320,7 @@ class Builder:
             parents = json.loads(h["parent_experiment_ids"] or "[]")
             g.add(Node(hid, "HYPOTHESIS", h["title"], summary=_short(h["rationale"], 220),
                        details={"rationale": h["rationale"], "expected_metric": h["expected_metric"],
+                                "falsified_if": h.get("falsified_if"),
                                 "priority": h["priority"], "parent_experiment_ids": parents,
                                 "researcher_call": h["llm_call_id"], "text_origin": "recorded (researcher)"},
                        source_table="hypotheses", source_id=h["id"], created_at=h["created_at"]))
@@ -325,7 +328,7 @@ class Builder:
                              summary=h["method"], details={"method": h["method"], "text_origin": "recorded (researcher)"},
                              source_table="hypotheses", source_id=h["id"], created_at=h["created_at"])).id
             g.link(hid, "proposes", mid, "Method the researcher proposed to test this hypothesis.", at=h["created_at"])
-            if not parents:
+            if not parents and h["llm_call_id"] not in round_calls:
                 g.link(q.id, "motivates", hid, "Proposed without citing an earlier experiment.", at=h["created_at"])
             for p in parents:
                 parent_is_base = base is not None and p == base["id"]
@@ -339,6 +342,8 @@ class Builder:
                            at=h["created_at"])
             for e in by_hyp.get(h["id"], []):
                 exp_node[e["id"]] = self._experiment(e, hid, mid)
+
+        self._rounds(rounds, hyps, hyp_id, q)
 
         # Evidence and decisions, in the order results arrived.
         finished = sorted((e for e in exps if not e["is_baseline"] and e["status"] in ("completed", "failed")),
@@ -510,6 +515,53 @@ class Builder:
         return g
 
     # --- helpers --------------------------------------------------------------
+    def _rounds(self, rounds: list[dict], hyps: list[dict], hyp_id: dict, q: Node) -> None:
+        """The researcher's own decision record for each round (recorded text, not derived)."""
+        g = self.g
+        members_of: dict = {}
+        for h in hyps:
+            members_of.setdefault(h["llm_call_id"], []).append(h)
+        for k, r in enumerate(rounds, 1):
+            d, did, at = r["data"], self.nid("round", r["id"]), r["created_at"]
+            latest = k == len(rounds)
+            members = members_of.get(r["llm_call_id"], [])
+            ev_ids = [self.nid("evidence", f"e{i}") for i in d.get("evidence_used", [])]
+            alts = []
+            for i, a in enumerate(d.get("alternatives_considered", [])):
+                aid = self.nid("alt", f"{r['id']}_{i}")
+                g.add(Node(aid, "HYPOTHESIS", a["idea"][:120], summary=f"Not proposed: {a['why_not_now']}",
+                           status="considered", epistemic="not_investigated",
+                           details={"why_not_now": a["why_not_now"], "round": k,
+                                    "text_origin": "recorded (researcher decision record)"},
+                           source_table="research_decisions", source_id=r["id"], created_at=at))
+                g.link(did, "deprioritizes", aid, a["why_not_now"], at=at)
+                alts.append({"hypothesis": aid, "title": a["idea"], "why_not_now": a["why_not_now"]})
+            g.add(Node(did, "DECISION", (f"Round {k}: " + "; ".join(h["title"] for h in members))[:120] or f"Round {k}",
+                       summary=d.get("why_these", ""), status="proceed", epistemic="recorded",
+                       details={"before": d.get("current_belief", ""), "alternatives": alts, "new_evidence": ev_ids,
+                                "affected": [hyp_id[h["id"]] for h in members], "why": d.get("why_these", ""),
+                                "assumptions": d.get("assumptions", []), "uncertain": d.get("uncertain", []),
+                                "why_next": [{"hypothesis": hyp_id[h["id"]], "title": h["title"],
+                                              "rationale": h["rationale"]} for h in members],
+                                "provenance": "recorded: the researcher's decision record for this round, "
+                                              "written when it proposed these hypotheses"},
+                       source_table="research_decisions", source_id=r["id"], created_at=at))
+            if ev_ids:
+                for ev in ev_ids:
+                    g.link(did, "depends_on", ev, "Cited as evidence in this round's decision record.", [ev], at=at)
+            else:
+                g.link(q.id, "motivates", did, "First round: nothing measured beyond the question.", at=at)
+            for h in members:
+                g.link(hyp_id[h["id"]], "inspired_by", did, "Proposed in this round.", ev_ids, at=h["created_at"])
+            for i, text in enumerate(d.get("uncertain", [])):
+                oid = self.nid("roundq", f"{r['id']}_{i}")
+                g.add(Node(oid, "OPEN_QUESTION", text[:160], status="open" if latest else "raised_earlier",
+                           summary=("Raised by the researcher in the latest round." if latest else
+                                    f"Raised in round {k}; later rounds did not repeat it, so it may be resolved."),
+                           details={"round": k, "text_origin": "recorded (researcher decision record)"},
+                           source_table="research_decisions", source_id=r["id"], created_at=at))
+                g.link(did, "motivates", oid, "Uncertainty recorded with this decision.", at=at)
+
     def _val_preds(self, e: dict | None) -> list[str] | None:
         """Per-example validation predictions of an experiment's last attempt, if they are on disk."""
         if not e or not self.work_dir:
@@ -520,7 +572,7 @@ class Builder:
         for a in range(e["attempts"] or 1, 0, -1):
             f = self.work_dir / f"exp_{e['id']:04d}" / f"attempt_{a}" / "out" / "val_pred.csv"
             if f.exists():
-                out = f.read_text(encoding="utf-8", errors="replace").split()
+                out = _lines(f)
                 break
         self._pred_cache[e["id"]] = out
         return out
@@ -528,30 +580,48 @@ class Builder:
     def cmp(self, new: dict, ref: dict | None, diff: float) -> tuple[str | None, str | None, dict]:
         """Strength of the difference between two experiments on the validation split.
 
-        For accuracy with predictions on disk: exact paired McNemar test on the examples where the
-        two disagree. Otherwise: an unpaired normal approximation (rougher, labelled as such).
+        With per-example predictions on disk:
+          accuracy           -> exact paired McNemar test on the examples where the two disagree;
+          rmse / mse / mae   -> paired test on per-example squared (or absolute) errors.
+        Without them, accuracy falls back to an unpaired normal approximation (labelled as such);
+        other metrics get no strength label rather than a formula that does not apply to them.
         """
-        if ref is None:
+        if ref is None or not self.domain:
             return None, None, {}
+        metric = self.domain.metric.lower()
         truth = self._val_truth()
         pa, pb = self._val_preds(new), self._val_preds(ref)
-        if (self.domain and self.domain.metric == "accuracy" and truth and pa and pb
-                and len(pa) == len(pb) == len(truth)):
-            b = sum(1 for x, y, t in zip(pa, pb, truth) if x != t and y == t)   # only the reference right
-            c = sum(1 for x, y, t in zip(pa, pb, truth) if x == t and y != t)   # only the new one right
+        paired = truth and pa and pb and len(pa) == len(pb) == len(truth)
+        if metric == "accuracy" and paired:
+            t = [_label(x) for x in truth]
+            a, r = [_label(x) for x in pa], [_label(x) for x in pb]
+            b = sum(1 for x, y, z in zip(a, r, t) if x != z and y == z)   # only the reference right
+            c = sum(1 for x, y, z in zip(a, r, t) if x == z and y != z)   # only the new one right
             pval = _mcnemar_p(b, c)
-            conf = "strong" if pval < 0.003 else "moderate" if pval < 0.05 else "weak"
-            return conf, f"paired McNemar p={pval:.3g}", {"test": "paired McNemar (exact)", "p": round(pval, 5),
-                                                            "only_new_right": c, "only_ref_right": b}
-        conf, z = strength(diff, ref["val_score"], new["val_score"], self.n_val())
-        if conf is None:
-            return None, None, {}
-        return conf, f"unpaired z={z}", {"test": "unpaired normal approximation", "z": z}
+            return _conf(pval), f"paired McNemar p={pval:.3g}", {"test": "paired McNemar (exact)", "p": round(pval, 5),
+                                                                   "only_new_right": c, "only_ref_right": b}
+        if metric in ("rmse", "mse", "mae") and paired:
+            try:
+                t, a, r = [float(x) for x in truth], [float(x) for x in pa], [float(x) for x in pb]
+            except ValueError:
+                return None, None, {}
+            loss = (lambda p, y: abs(p - y)) if metric == "mae" else (lambda p, y: (p - y) ** 2)
+            d = [loss(x, z) - loss(y, z) for x, y, z in zip(a, r, t)]      # < 0 where the new one is better
+            pval, tstat = _paired_t_p(d)
+            name = "absolute" if metric == "mae" else "squared"
+            return _conf(pval), f"paired t-test on {name} errors p={pval:.3g}", {
+                "test": f"paired t-test on per-example {name} errors (normal approx.)", "p": round(pval, 5),
+                "t": round(tstat, 2), "n": len(d)}
+        if metric == "accuracy":
+            conf, z = strength(diff, ref["val_score"], new["val_score"], self.n_val())
+            if conf is not None:
+                return conf, f"unpaired z={z}", {"test": "unpaired normal approximation", "z": z}
+        return None, None, {}
 
     def _val_truth(self) -> list[str] | None:
         if not hasattr(self, "_truth"):
             f = self.work_dir / "data" / "private" / "val_y.csv" if self.work_dir else None
-            self._truth = f.read_text(encoding="utf-8").split() if f and f.exists() else None
+            self._truth = _lines(f) if f and f.exists() else None
         return self._truth
 
     def _round_key(self, e: dict, hyps: list[dict]):
@@ -578,7 +648,7 @@ class Builder:
         return node.id
 
     def _check_assumptions(self, a_proxy: Node, a_thresh: Node, base, completed, n, metric) -> None:
-        if base and n:
+        if base and n and self.domain and self.domain.metric.lower() == "accuracy":
             p = base["val_score"]
             se_diff = math.sqrt(2 * p * (1 - p) / n) if 0 <= p <= 1 else None
             if se_diff:
@@ -629,6 +699,40 @@ class Builder:
                                "close to it should be re-checked before being relied on.",
                        status="open", created_at=g.nodes[conclusions[-1]].created_at))
             g.link(self.nid("assumption", "threshold"), "motivates", oid, "Assumption questioned by the noise check.")
+
+
+def _conf(p: float) -> str:
+    return "strong" if p < 0.003 else "moderate" if p < 0.05 else "weak"
+
+
+def _lines(path: Path) -> list[str]:
+    rows = [x.strip() for x in path.read_text(encoding="utf-8", errors="replace").splitlines()]
+    while rows and rows[-1] == "":
+        rows.pop()
+    return rows
+
+
+def _label(v: str) -> str:
+    """1, 1.0 and "1" are the same class label (as in the scaffolded scorers)."""
+    v = v.strip().strip('"')
+    try:
+        x = float(v)
+        return str(int(x)) if x.is_integer() else repr(x)
+    except ValueError:
+        return v
+
+
+def _paired_t_p(d: list[float]) -> tuple[float, float]:
+    """Two-sided p-value of a paired t-test on differences d (normal approximation; n is in the hundreds)."""
+    n = len(d)
+    if n < 2:
+        return 1.0, 0.0
+    mean = sum(d) / n
+    var = sum((x - mean) ** 2 for x in d) / (n - 1)
+    if var == 0:
+        return (1.0, 0.0) if mean == 0 else (0.0, float("inf"))
+    t = mean / math.sqrt(var / n)
+    return math.erfc(abs(t) / math.sqrt(2)), t
 
 
 def _mcnemar_p(b: int, c: int) -> float:
@@ -759,6 +863,9 @@ def next_steps(g: Graph) -> list[dict]:
             out.append({"node": n.id, "kind": "unexplored", "title": n.title,
                         "reason": f"Queued but never tested (priority {n.details.get('priority')}).",
                         "rank": 2 - float(n.details.get("priority") or 0) / 10})
+        elif n.type == "HYPOTHESIS" and n.status == "considered":
+            out.append({"node": n.id, "kind": "considered", "title": n.title,
+                        "reason": f"Considered but not proposed: {n.details.get('why_not_now')}", "rank": 2.8})
         elif n.type == "HYPOTHESIS" and n.status == "untested_invalid":
             out.append({"node": n.id, "kind": "retry", "title": n.title,
                         "reason": "Its experiment failed, so the idea itself is still untested.", "rank": 2.5})
@@ -819,7 +926,12 @@ def narrative(g: Graph) -> str:
             lines.append(f"- **New evidence:** {'; '.join(ev)}")
         lines.append(f"- **Decision ({VERDICT_LABEL.get(d.status, d.status).lower()}, {d.epistemic}):** {d.summary}")
         if det.get("alternatives"):
-            lines.append("- **Alternatives in the same round:** " + "; ".join(a["title"] for a in det["alternatives"]))
+            label = "Considered but not proposed" if d.status == "proceed" else "Alternatives in the same round"
+            lines.append(f"- **{label}:** " + "; ".join(
+                a["title"] + (f" (not now: {a['why_not_now']})" if a.get("why_not_now") else "")
+                for a in det["alternatives"]))
+        if det.get("assumptions"):
+            lines.append("- **Assumptions relied on or questioned:** " + "; ".join(det["assumptions"]))
         if det.get("why_next"):
             lines.append("- **Next direction:** " + "; ".join(
                 f"{w['title']} (\"{_short(w['rationale'], 160)}\")" for w in det["why_next"]))
@@ -830,7 +942,8 @@ def narrative(g: Graph) -> str:
               ("Not supported: no detectable gain (inconclusive, not refuted)", "not_supported"),
               ("Beat the baseline but deprioritized (benchmark ranking)", "supported_not_best"),
               ("Untested because the experiment was invalid", "untested_invalid"),
-              ("Not yet investigated", "not_investigated")]
+              ("Not yet investigated", "not_investigated"),
+              ("Considered by the researcher but never proposed", "considered")]
     lines += ["## Branches not taken (kept, not deleted)", ""]
     for label, st in groups:
         hs = [h for h in by("HYPOTHESIS") if h.status == st]

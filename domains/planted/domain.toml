@@ -1,0 +1,36 @@
+name = "planted"
+objective = "Minimise validation RMSE predicting y from the other columns, and identify which features and what kind of structure actually drive y."
+metric = "rmse"
+higher_is_better = false
+# A hypothesis "succeeds" when it beats the baseline's validation rmse by at least this much.
+# 0.05 RMSE: below that, a gain is not worth reporting on this problem.
+min_improvement = 0.05
+
+contract = """
+You write ONE self-contained Python 3.12 program. It runs as `python /code/experiment.py`
+inside a sandbox with NO network, a read-only filesystem except /out and /tmp, 1 CPU,
+1 GB RAM and a hard wall-clock limit (see below). Installed libraries: numpy 2.1,
+scipy 1.14, scikit-learn 1.5, pandas 2.2 and the standard library. Nothing else.
+
+Task: regression of the column `y` from the other columns of a tabular dataset.
+
+Inputs (read-only CSV files with a header row):
+  /data/train.csv  (~1800 rows) all feature columns plus the target column `y`
+  /data/val_X.csv  the same feature columns, no target
+  /data/test_X.csv the same feature columns, no target
+Feature columns: x1, x2, x3, x4, group, noise1, noise2, noise3, noise4, noise5, noise6
+Non-numeric columns: group
+
+Required outputs:
+  /out/val_pred.csv   one prediction per line, no header, same row order as val_X.csv
+  /out/test_pred.csv  one prediction per line, no header, same row order as test_X.csv
+Each prediction must be a finite number.
+
+Rules:
+  - Seed all randomness from the integer environment variable SEED.
+  - Train only on /data/train.csv (you may split it further for model selection).
+  - Do not try to read or infer validation/test targets; they are not available.
+  - Handle missing values and non-numeric columns yourself.
+  - Print short progress lines to stdout; keep total runtime well under the limit.
+  - Exit with status 0 on success.
+"""

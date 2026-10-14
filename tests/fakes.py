@@ -70,8 +70,15 @@ class ScriptedAdapter:
                 self.counter += 1
                 hs.append({"title": f"idea {self.counter}", "rationale": f"after {len(context['experiments'])} results",
                            "method": "m", "expected_metric": 0.9, "priority": 0.5,
-                           "parent_experiment_ids": parents[-1:] + [9999]})
-            return json.dumps({"hypotheses": hs}), usage
+                           "parent_experiment_ids": parents[-1:] + [9999], "falsified_if": "val below 0.85"})
+            decision = {"current_belief": f"{len(context['experiments'])} results so far",
+                        "evidence_used": parents[-1:] + [9999],
+                        "alternatives_considered": [{"idea": f"alt after {len(context['experiments'])}",
+                                                     "why_not_now": "lower expected gain"}],
+                        "assumptions": ["validation is representative"],
+                        "uncertain": [f"uncertainty {len(context['experiments'])}"],
+                        "why_these": "cheapest informative tests"}
+            return json.dumps({"decision": decision, "hypotheses": hs}), usage
         if role == "coder":
             title = context["hypothesis"]["title"]
             steps = self.plan.get(title, ["acc=0.8"])

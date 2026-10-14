@@ -22,7 +22,25 @@ def _obj(props: dict, required: list[str] | None = None) -> dict:
     }
 
 
+DECISION = _obj({
+    "current_belief": {"type": "string",
+                       "description": "What the recorded results currently support, citing experiment ids (#n)"},
+    "evidence_used": {"type": "array", "items": {"type": "integer"},
+                      "description": "Experiment ids this round's reasoning rests on"},
+    "alternatives_considered": {
+        "type": "array",
+        "items": _obj({"idea": {"type": "string"},
+                       "why_not_now": {"type": "string", "description": "Why it is not proposed this round"}}),
+        "description": "Directions considered but NOT proposed this round (at most 4)"},
+    "assumptions": {"type": "array", "items": {"type": "string"},
+                    "description": "Assumptions this round relies on or now questions (at most 3)"},
+    "uncertain": {"type": "array", "items": {"type": "string"},
+                  "description": "What remains uncertain after the results so far (at most 3)"},
+    "why_these": {"type": "string", "description": "Why the proposed hypotheses are the most useful next tests"},
+})
+
 HYPOTHESES = _obj({
+    "decision": DECISION,
     "hypotheses": {
         "type": "array",
         "items": _obj({
@@ -33,6 +51,8 @@ HYPOTHESES = _obj({
             "priority": {"type": "number", "description": "0..1, higher runs first"},
             "parent_experiment_ids": {"type": "array", "items": {"type": "integer"},
                                       "description": "Experiment ids whose results motivated this hypothesis"},
+            "falsified_if": {"type": "string",
+                             "description": "The measured result that would count against this hypothesis"},
         }),
     },
 })

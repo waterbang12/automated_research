@@ -24,6 +24,8 @@
     untested_invalid: ["invalid", "⚠", "untested (invalid run)"], interrupted: ["invalid", "⏸", "interrupted"],
     not_investigated: ["unexplored", "○", "not investigated"], in_progress: ["unexplored", "◔", "in progress"],
     running: ["unexplored", "◔", "running"], stale: ["faded", "·", "stale"],
+    proceed: ["", "→", "proceeded"], considered: ["unexplored", "○", "considered, not run"],
+    raised_earlier: ["faded", "?", "raised earlier"],
   };
   const st = (s) => STATUS[s] || ["", "●", s || ""];
 
@@ -92,7 +94,7 @@
   const nodeTypes = { r: RNode };
 
   // ---------------------------------------------------------------- trend chart
-  function Trend({ trend, onPick }) {
+  function Trend({ trend, onPick, higher = true }) {
     const [hover, setHover] = useState(null);
     const [table, setTable] = useState(false);
     if (!trend || !trend.length) return html`<p class="muted">No scored experiments yet.</p>`;
@@ -102,8 +104,8 @@
     const pad = (hi - lo) * 0.12 || 0.01; lo -= pad; hi += pad;
     const x = (i) => L + (trend.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (trend.length - 1));
     const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-    let best = -Infinity;
-    const bestPts = trend.map((t, i) => { best = Math.max(best, t.val_score); return [x(i), y(best)]; });
+    let best = higher ? -Infinity : Infinity;
+    const bestPts = trend.map((t, i) => { best = higher ? Math.max(best, t.val_score) : Math.min(best, t.val_score); return [x(i), y(best)]; });
     const base = trend.find((t) => t.is_baseline);
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => lo + f * (hi - lo));
     const step = bestPts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `H${p[0]}V${p[1]}`)).join("");
@@ -153,13 +155,14 @@
         <div>New evidence</div><div>${(d.new_evidence || []).map((id) => html`<div key=${id}>${link(id)}</div>`)}</div>
         <div>Affected</div><div>${(d.affected || []).map((id) => html`<div key=${id}>${link(id)}</div>`)}</div>
         <div>Decision</div><div><b>${label}</b> (${n.epistemic}): ${d.why}</div>
-        <div>Alternatives</div><div>${(d.alternatives || []).length ? d.alternatives.map((a) => html`<div key=${a.hypothesis}>${link(a.hypothesis)}</div>`) : html`<span class="muted">none recorded in this round</span>`}</div>
+        <div>Alternatives</div><div>${(d.alternatives || []).length ? d.alternatives.map((a) => html`<div key=${a.hypothesis}>${link(a.hypothesis)}${a.why_not_now ? html`<div class="muted">not now: ${a.why_not_now}</div>` : null}</div>`) : html`<span class="muted">none recorded in this round</span>`}</div>
+        ${(d.assumptions || []).length ? html`<div>Assumptions</div><div>${d.assumptions.map((a, i) => html`<div key=${i}>${a}</div>`)}</div>` : null}
         <div>Next direction</div><div>${(d.why_next || []).length ? d.why_next.map((w) => html`<div key=${w.hypothesis}>${link(w.hypothesis)}<div class="muted">“${w.rationale}”</div></div>`) : html`<span class="muted">no later hypothesis cites this result</span>`}</div>
         <div>Uncertain</div><div>${(d.uncertain || []).length ? d.uncertain.join(" ") : html`<span class="muted">nothing flagged</span>`}</div>
       </div>
       <p class="muted">${d.provenance}</p>`;
     const plain = Object.entries(d).filter(([k]) => !["before", "alternatives", "new_evidence", "affected", "why", "why_next",
-      "uncertain", "provenance", "code_versions"].includes(k));
+      "uncertain", "provenance", "code_versions", "assumptions"].includes(k));
     return html`<div>
       <div class="muted">${n.type.replace("_", " ")} · ${n.origin} · ${when(n.created_at)}</div>
       <h2>${n.title}</h2>
@@ -266,8 +269,15 @@
       ${step.hypothesis_title ? html`<p><b>Hypothesis:</b> ${step.hypothesis_title}</p>` : null}
       ${step.summary ? html`<p>${step.summary}</p>` : null}
       ${!d ? html`<p class="muted">Loading…</p>` : html`<div>
+        ${step.detail && step.detail.decision ? html`<h3>Decision record</h3><div class="kv">
+            <div>Current belief</div><div>${step.detail.decision.current_belief}</div>
+            <div>Evidence used</div><div>${step.detail.decision.evidence_used.map((i) => "#" + i).join(", ") || "–"}</div>
+            <div>Why these</div><div>${step.detail.decision.why_these}</div>
+            <div>Not now</div><div>${step.detail.decision.alternatives_considered.length ? step.detail.decision.alternatives_considered.map((a, i) => html`<div key=${i}><b>${a.idea}</b> <span class="muted">${a.why_not_now}</span></div>`) : html`<span class="muted">none</span>`}</div>
+            <div>Assumptions</div><div>${step.detail.decision.assumptions.join("; ") || "–"}</div>
+            <div>Uncertain</div><div>${step.detail.decision.uncertain.join("; ") || "–"}</div></div>` : null}
         ${d.hypotheses.length ? html`<h3>Hypotheses proposed</h3>${d.hypotheses.map((h) => html`<details key=${h.id}><summary><b>${h.title}</b> <span class="muted">priority ${h.priority} · predicted ${h.expected_metric}</span></summary>
-            <p>${h.rationale}</p><p class="muted">${h.method}</p></details>`)}` : null}
+            <p>${h.rationale}</p>${h.falsified_if ? html`<p><b>Falsified if:</b> ${h.falsified_if}</p>` : null}<p class="muted">${h.method}</p></details>`)}` : null}
         ${d.code ? html`<h3>Program</h3><${Code} code=${d.code} previous=${d.previous_code} />` : null}
         ${d.execution ? html`<h3>Execution</h3><div class="kv">
             <div>exit code</div><div>${d.execution.exit_code === null ? "–" : d.execution.exit_code}${d.execution.timed_out ? " (timed out)" : ""}</div>
@@ -359,6 +369,7 @@
     const [statusFilter, setStatusFilter] = useState("");
     const [confFilter, setConfFilter] = useState("");
     const [from, setFrom] = useState(""), [to, setTo] = useState("");
+    const [replay, setReplay] = useState(null);       // index into decision times; null = now
     const [search, setSearch] = useState("");
     const [collapsed, setCollapsed] = useState(new Set());
     const [selected, setSelected] = useState(null);
@@ -396,11 +407,17 @@
       if (inst && inst.getNode(id)) inst.fitView({ nodes: [{ id }], duration: 400, maxZoom: 1.1 });
     }, [sel]);
 
+    // Replay: the graph as it stood right after each decision, in order.
+    const moments = useMemo(() => (graph ? graph.nodes.filter((n) => n.type === "DECISION" && n.created_at)
+      .sort((a, b) => a.created_at - b.created_at).map((n) => ({ t: n.created_at, title: n.title, id: n.id })) : []), [graph]);
+    useEffect(() => setReplay(null), [graph && graph.run && graph.run.id, sel]);
+
     // Visible set: filters, then collapse (hide everything only reachable through a collapsed node).
     const view = useMemo(() => {
       if (!graph) return null;
       const t0 = from ? new Date(from).getTime() / 1000 : -Infinity;
-      const t1 = to ? new Date(to).getTime() / 1000 + 86400 : Infinity;
+      const t1 = Math.min(to ? new Date(to).getTime() / 1000 + 86400 : Infinity,
+        replay !== null && moments[replay] ? moments[replay].t + 0.001 : Infinity);
       const keep = graph.nodes.filter((n) => !hiddenTypes.has(n.type)
         && (!statusFilter || n.status === statusFilter)
         && (!confFilter || (confFilter === "strong" ? n.confidence === "strong" : ["strong", "moderate"].includes(n.confidence)))
@@ -446,7 +463,7 @@
       const nodes = keep.filter((n) => seen.has(n.id));
       const vEdges = edges.filter((e) => seen.has(e.flow_src) && seen.has(e.flow_dst));
       return { nodes, edges: vEdges, down, hiddenUnder };
-    }, [graph, hiddenTypes, statusFilter, confFilter, from, to, collapsed]);
+    }, [graph, hiddenTypes, statusFilter, confFilter, from, to, collapsed, replay, moments]);
 
     const q = search.trim().toLowerCase();
     const matches = useMemo(() => new Set(!q || !view ? [] : view.nodes.filter((n) =>
@@ -534,6 +551,11 @@
           <option value="moderate">moderate or strong</option><option value="strong">strong</option></select>
         <span class="lbl">from</span><input type="date" value=${from} onChange=${(e) => setFrom(e.target.value)} />
         <span class="lbl">to</span><input type="date" value=${to} onChange=${(e) => setTo(e.target.value)} />
+        ${moments.length ? html`<span class="lbl">replay</span>
+          <input type="range" min="0" max=${moments.length} value=${replay === null ? moments.length : replay}
+            onInput=${(e) => { const v = Number(e.target.value); setReplay(v >= moments.length ? null : v); }} style=${{ width: "160px" }} />
+          <span class="muted" style=${{ maxWidth: "260px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            ${replay === null ? "now" : `after ${replay + 1}/${moments.length}: ${moments[replay].title}`}</span>` : null}
       </div>
       <div class="main">
         <div class="canvas">
@@ -566,7 +588,8 @@
               ${graph.next_steps.map((s) => html`<div class="next-item" key=${s.node + s.kind} onClick=${() => select(s.node)}>
                 <b>${s.title}</b><div class="muted">${s.kind.replace("_", " ")} · ${s.reason}</div></div>`)}
               ${graph.next_steps.length ? null : html`<p class="muted">Nothing open.</p>`}</div>` : null}
-          ${tab === "trend" && graph ? html`<div><h3>Performance by experiment</h3><${Trend} trend=${graph.trend} onPick=${pickExperiment} />
+          ${tab === "trend" && graph ? html`<div><h3>Performance by experiment</h3><${Trend} trend=${graph.trend} onPick=${pickExperiment}
+              higher=${((graph.nodes.find((n) => n.type === "QUESTION") || {}).details || {}).higher_is_better !== false} />
               <p class="muted">Agents only ever saw validation scores. Test scores are shown here so you can spot overfitting to validation.</p></div>` : null}
           ${tab === "compare" ? (compareData ? html`<${Compare} data=${compareData} onSelect=${select} onClose=${() => { setCompareData(null); setTab("details"); }} />`
               : html`<p class="muted">Select a node, press “Compare: set A”, then select a second node and press “Compare with A”.</p>`) : null}

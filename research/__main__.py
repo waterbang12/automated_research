@@ -1,4 +1,4 @@
-"""CLI: python -m research {build-sandbox,run,report,show,permissions,graph} ..."""
+"""CLI: python -m research {build-sandbox,new-domain,check-domain,run,report,show,permissions,graph} ..."""
 from __future__ import annotations
 
 import argparse
@@ -64,7 +64,8 @@ def print_report(mem: Memory, name: str, show_test: bool = True) -> None:
               f"{parents:<9} {title[:70]}")
     done = [e for e in exps if e["status"] == "completed" and not e["is_baseline"]]
     if done:
-        best = max(done, key=lambda e: e["val_score"])
+        # "Best" follows the domain's direction: by `improvement` (positive is always better), not raw score.
+        best = max(done, key=lambda e: e["improvement"])
         print(f"\nBest by validation: #{best['id']} {best['title']} val={best['val_score']:.4f} "
               f"held-out test={best['test_score']:.4f}")
     cost = mem.one("SELECT COUNT(*) n, COALESCE(SUM(cost_usd),0) c, COALESCE(SUM(input_tokens),0) i, "
@@ -154,6 +155,33 @@ def cmd_graph(args) -> int:
     return 0
 
 
+def cmd_new_domain(args) -> int:
+    from .scaffold import new_domain
+    for p in new_domain(args.name, Path(args.csv), args.target, args.task, args.objective):
+        print(f"wrote {p}")
+    print(f"\nNext: review domains/{args.name}/domain.toml (objective, min_improvement, contract), then\n"
+          f"  python -m research check-domain {args.name}\n"
+          f"  python -m research run configs/{args.name}.toml --max-experiments 2")
+    return 0
+
+
+def cmd_check_domain(args) -> int:
+    from .config import SandboxConfig
+    from .executor import DockerExecutor
+    from .scaffold import check_domain
+    sys.stdout.reconfigure(errors="replace")
+    try:
+        rows = asyncio.run(check_domain(args.name, DockerExecutor(SandboxConfig())))
+    except ExecutorUnavailable as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 2
+    for label, ok, detail in rows:
+        print(f"{'PASS' if ok else 'FAIL'}  {label}" + (f"  ({detail})" if detail else ""))
+    failed = [r for r in rows if not r[1]]
+    print("\n" + ("Domain is ready for a run." if not failed else f"{len(failed)} check(s) failed."))
+    return 1 if failed else 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m research")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -173,6 +201,14 @@ def main(argv=None) -> int:
     s = sub.add_parser("show", help="show one experiment: hypothesis, all code versions, outputs")
     s.add_argument("config")
     s.add_argument("experiment", type=int)
+    nd = sub.add_parser("new-domain", help="scaffold a research problem from a CSV file")
+    nd.add_argument("name")
+    nd.add_argument("--csv", required=True, help="CSV with a header row")
+    nd.add_argument("--target", required=True, help="column to predict")
+    nd.add_argument("--task", choices=["classification", "regression"], help="default: inferred from the target")
+    nd.add_argument("--objective", help="the research question; default: maximise accuracy / minimise RMSE")
+    cd = sub.add_parser("check-domain", help="run a domain's prepare, baseline and scorer checks (no LLM)")
+    cd.add_argument("name")
     gr = sub.add_parser("graph", help="research reasoning graph: build, export, or serve the viewer")
     gr.add_argument("action", choices=["build", "export", "serve"])
     gr.add_argument("config", nargs="?", help="run config (build/export)")
@@ -184,7 +220,8 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.WARNING if getattr(args, "quiet", False) else logging.INFO,
                         format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     return {"build-sandbox": cmd_build, "run": cmd_run, "report": cmd_report, "show": cmd_show,
-            "permissions": cmd_permissions, "graph": cmd_graph}[args.cmd](args)
+            "permissions": cmd_permissions, "graph": cmd_graph, "new-domain": cmd_new_domain,
+            "check-domain": cmd_check_domain}[args.cmd](args)
 
 
 if __name__ == "__main__":

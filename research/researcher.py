@@ -16,7 +16,14 @@ by a fixed, trusted evaluator you cannot change. Propose hypotheses that are:
 - informed by the recorded results: build on what worked, avoid what failed, explain why;
 - genuinely different from every experiment already run or queued.
 Prefer ideas with a high expected gain per experiment. Cite the experiment ids that
-motivated each hypothesis in parent_experiment_ids."""
+motivated each hypothesis in parent_experiment_ids.
+
+Before the hypotheses, record your decision for this round, as a researcher would in a lab
+notebook: what the results so far support (cite #ids; say so when the evidence is weak or a
+difference is within noise), which directions you considered but are NOT proposing now and why,
+which assumptions you rely on or now doubt, and what remains uncertain. Only claim what the
+recorded results show; a method that underperformed once is not proven useless. For each
+hypothesis, state in falsified_if the measured result that would count against it."""
 
 
 def _norm(s: str) -> str:
@@ -93,6 +100,12 @@ class Researcher:
             role="researcher", system=SYSTEM, prompt=self.prompt(ctx), schema=schemas.HYPOTHESES,
             schema_name="hypotheses", context=ctx, check=check)
         known = {_norm(h["title"]) for h in self.memory.hypotheses(self.run_id)}
+        d = data["decision"]
+        d["evidence_used"] = [i for i in d["evidence_used"] if i in valid_ids]
+        for k, cap in (("alternatives_considered", 4), ("assumptions", 3), ("uncertain", 3)):
+            d[k] = d[k][:cap]
+        self.last_decision = d
+        self.last_decision_id = self.memory.add_decision(self.run_id, call_id, d)
         ids = []
         for h in data["hypotheses"][:n]:
             if _norm(h["title"]) in known:

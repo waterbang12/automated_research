@@ -49,7 +49,8 @@ def _hyp(spec, rationale, expected, priority, parents):
     return {"title": _describe(spec)[:80], "rationale": rationale,
             "method": f"Train {_describe(spec)} on standardised pixels.\nSPEC {json.dumps(spec)}",
             "expected_metric": round(expected, 4), "priority": round(priority, 3),
-            "parent_experiment_ids": parents}
+            "parent_experiment_ids": parents,
+            "falsified_if": f"validation accuracy below {expected - 0.01:.4f}"}
 
 
 def researcher(ctx):
@@ -97,7 +98,21 @@ def researcher(ctx):
         if fam not in tried and fam not in losing:
             add(_default(fam), f"Family {fam} is untested; baseline is {base['val_score']:.4f}.",
                 base["val_score"] + 0.01, 0.6 if done else 0.8 - 0.05 * len(out), [base["id"]])
-    return {"hypotheses": out}
+    best = max(done, key=lambda es: es[0]["val_score"])[0] if done else None
+    skipped = [f for f in GRID if f not in tried and f not in losing and
+               not any(_spec(h["method"])["family"] == f for h in out)][:2]
+    decision = {
+        "current_belief": (f"Best so far is #{best['id']} at {best['val_score']:.4f} vs baseline {base['val_score']:.4f}."
+                           if best else f"Only the baseline has been measured ({base['val_score']:.4f})."),
+        "evidence_used": [best["id"]] if best else [base["id"]],
+        "alternatives_considered": [{"idea": f"untested family {f}", "why_not_now": "lower priority than the "
+                                     "ideas proposed; the grid search reaches it in a later round"} for f in skipped],
+        "assumptions": ["the fixed validation split ranks models the same way the test split would"],
+        "uncertain": ([f"whether #{best['id']} is a local optimum of its grid"] if best else []),
+        "why_these": "Exploit the best configuration's grid neighbours, combine the strongest families, "
+                     "then explore untested families (deterministic grid search, not AI).",
+    }
+    return {"decision": decision, "hypotheses": out}
 
 
 def _model_code(spec) -> str:

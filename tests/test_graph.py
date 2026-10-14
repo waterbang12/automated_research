@@ -50,6 +50,12 @@ def hyp(g, title):
     return next(n for n in g.nodes.values() if n.type == "HYPOTHESIS" and n.title == title)
 
 
+def exp_decision(g, title):
+    """The derived decision taken after the experiment that tested `title`."""
+    return next(n for n in g.nodes.values() if n.type == "DECISION" and n.source_table == "experiments"
+                and n.title.endswith(": " + title))
+
+
 def edges(g, rel=None, src=None, dst=None):
     return [e for e in g.edges.values()
             if (rel is None or e.rel == rel) and (src is None or e.src == src) and (dst is None or e.dst == dst)]
@@ -76,7 +82,7 @@ def test_evidence_relationships(recorded):
     assert edges(g, "contradicts", ev("idea 2"), hyp(g, "idea 2").id)
     # An invalid experiment is not evidence about its hypothesis.
     assert not [e for e in g.edges.values() if e.dst == hyp(g, "idea 3").id and e.rel in ("supports", "contradicts")]
-    d3 = next(n for n in g.nodes.values() if n.type == "DECISION" and "idea 3" in n.title)
+    d3 = exp_decision(g, "idea 3")
     assert d3.status == "invalid" and "untested" in d3.summary
     # Paired test on per-example predictions was used where available.
     e2 = g.nodes[ev("idea 2")]
@@ -90,17 +96,41 @@ def test_evidence_relationships(recorded):
 
 def test_decisions_record_why_reasoning_changed(recorded):
     _, g = build(recorded)
-    d1 = next(n for n in g.nodes.values() if n.type == "DECISION" and n.title.endswith("idea 1"))
+    d1 = exp_decision(g, "idea 1")
     for k in ("before", "alternatives", "new_evidence", "affected", "why", "why_next", "uncertain"):
         assert k in d1.details
     assert d1.status == "adopt" and d1.details["affected"] == [hyp(g, "idea 1").id]
     assert [a["title"] for a in d1.details["alternatives"]] == ["idea 2"]       # same researcher round
     assert edges(g, "selects", d1.id, hyp(g, "idea 1").id)
-    d2 = next(n for n in g.nodes.values() if n.type == "DECISION" and n.title.endswith("idea 2"))
+    d2 = exp_decision(g, "idea 2")
     assert d2.status == "reject" and "not shown to be impossible" in d2.summary
     # The fake researcher cites the latest result; those citations become the "next direction".
     assert {w["title"] for w in d2.details["why_next"]} == {"idea 3", "idea 4"}
     assert edges(g, "inspired_by", hyp(g, "idea 4").id, d2.id)
+
+
+def test_round_decisions_are_recorded_by_the_researcher(recorded):
+    mem, g = build(recorded)
+    rounds = sorted((n for n in g.nodes.values() if n.type == "DECISION" and n.source_table == "research_decisions"),
+                    key=lambda n: n.created_at)
+    assert len(rounds) == len(mem.decisions(g.run["id"])) >= 3
+    r1, r2 = rounds[0], rounds[1]
+    assert r1.status == "proceed" and r1.epistemic == "recorded" and r1.details["provenance"].startswith("recorded")
+    assert r1.title.startswith("Round 1: idea 1; idea 2")
+    assert edges(g, "inspired_by", hyp(g, "idea 1").id, r1.id)
+    # The fake cites a nonexistent experiment 9999; it is dropped, real citations become evidence edges.
+    assert all("9999" not in e for e in r2.details["new_evidence"])
+    assert all(edges(g, "depends_on", r2.id, e) for e in r2.details["new_evidence"])
+    # Alternatives the researcher considered but did not propose are kept as unexplored branches.
+    alt = r1.details["alternatives"][0]
+    assert g.nodes[alt["hypothesis"]].status == "considered" and alt["why_not_now"] == "lower expected gain"
+    assert edges(g, "deprioritizes", r1.id, alt["hypothesis"])
+    # Only the latest round's uncertainties count as open.
+    qs = [n for n in g.nodes.values() if n.type == "OPEN_QUESTION" and n.source_table == "research_decisions"]
+    assert {n.status for n in qs} == {"open", "raised_earlier"}
+    assert sum(n.status == "open" for n in qs) == len(rounds[-1].details["uncertain"])
+    assert hyp(g, "idea 1").details["falsified_if"] == "val below 0.85"
+    assert "Considered by the researcher but never proposed" in G.narrative(g)
 
 
 def test_rejected_and_superseded_branches_are_preserved(recorded):
@@ -229,3 +259,10 @@ def test_viewer_api(recorded):
         assert e.value.code == 404
     finally:
         srv.shutdown()
+
+
+def test_paired_t():
+    p, t = G._paired_t_p([-1.0, -1.2, -0.8] * 50)          # consistently lower error -> significant
+    assert p < 1e-6 and t < 0
+    assert G._paired_t_p([1.0, -1.0] * 50)[0] > 0.9         # no systematic difference
+    assert G._paired_t_p([0.0] * 10) == (1.0, 0.0)
