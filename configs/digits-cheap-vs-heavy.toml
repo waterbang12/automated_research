@@ -1,0 +1,40 @@
+# Demo run used to generate the sample Research Reasoning Graph (docs/sample-graph). Uses the
+# headless Claude Code adapter; see digits-claude-cli.toml for the full explanation of each setting.
+[run]
+name = "digits-cheap-vs-heavy"
+domain = "digits"
+objective = "Can cheap, fast models match a kernel SVM on 8x8 digits? Test each cheap family directly (Gaussian naive Bayes, depth-limited decision trees, kNN, plain linear models), each against the baseline and an RBF-SVM reference, rather than only chasing the best accuracy."
+max_experiments = 6
+budget_usd = 3.00
+workers = 2
+hypotheses_per_round = 2
+max_fix_attempts = 2
+llm_validation_retries = 2
+llm_analysis = true
+
+[llm]
+provider = "claude-cli"
+model = "claude-opus-5-5"
+effort = "medium"
+max_tokens = 16000              # only used to size each call's worst-case budget reservation
+cli_timeout_s = 600
+
+# Optional per-role overrides, e.g. a cheaper analyst:
+# [llm.roles.analyst]
+# provider = "claude-cli"
+# model = "claude-haiku-5-5"
+
+[sandbox]
+image = "autoresearch-sandbox:1"
+timeout_s = 120
+memory = "1g"
+cpus = 1.0
+pids = 128
+network = "none"
+
+# USD per 1M tokens [input, output]; used for the worst-case reservation before each call.
+[pricing]
+"claude-opus-5-5" = [4.0, 20.0]
+"claude-sonnet-5-5" = [2.0, 10.0]
+"claude-haiku-5-5" = [0.10, 0.50]
+"claude-fable-5-1" = [10.0, 50.0]

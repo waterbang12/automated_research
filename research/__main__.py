@@ -1,4 +1,4 @@
-"""CLI: python -m research {build-sandbox,run,report,show,permissions} ..."""
+"""CLI: python -m research {build-sandbox,run,report,show,permissions,graph} ..."""
 from __future__ import annotations
 
 import argparse
@@ -111,6 +111,49 @@ def cmd_permissions(args) -> int:
     return 0
 
 
+def _run_graph(cfg):
+    from . import graph as G
+    mem = Memory(cfg.db_path)
+    run = mem.get_run(cfg.name)
+    if not run:
+        raise SystemExit(f"no run named {cfg.name!r} in {cfg.db_path}")
+    return mem, G.refresh(mem, run, work_dir=cfg.work_path if cfg.work_path.exists() else None,
+                          domain=G.open_domain(run["domain"]))
+
+
+def cmd_graph(args) -> int:
+    from . import graph as G
+    sys.stdout.reconfigure(errors="replace")      # LLM-written titles may not fit the console code page
+    if args.action == "serve":
+        from .viewer_server import serve
+        srv = serve(Path(args.runs).resolve(), args.port)
+        print(f"Research graph viewer: http://127.0.0.1:{args.port}/   (Ctrl+C to stop)")
+        try:
+            srv.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        return 0
+    if not args.config:
+        print("graph build/export need a config", file=sys.stderr)
+        return 2
+    mem, g = _run_graph(config_mod.load(args.config))
+    if args.action == "build":
+        from collections import Counter
+        print(f"{len(g.nodes)} nodes, {len(g.edges)} edges: "
+              + ", ".join(f"{k} {v}" for k, v in sorted(Counter(n.type for n in g.nodes.values()).items())))
+        for s in G.next_steps(g)[:5]:
+            print(f"  next: {s['title']} - {s['reason']}")
+        return 0
+    text = G.narrative(g) if args.format == "md" else json.dumps(g.to_dict(), indent=2, default=str)
+    if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.output).write_text(text, encoding="utf-8")
+        print(f"wrote {args.output}")
+    else:
+        print(text)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m research")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -130,11 +173,18 @@ def main(argv=None) -> int:
     s = sub.add_parser("show", help="show one experiment: hypothesis, all code versions, outputs")
     s.add_argument("config")
     s.add_argument("experiment", type=int)
+    gr = sub.add_parser("graph", help="research reasoning graph: build, export, or serve the viewer")
+    gr.add_argument("action", choices=["build", "export", "serve"])
+    gr.add_argument("config", nargs="?", help="run config (build/export)")
+    gr.add_argument("--format", choices=["md", "json"], default="md", help="export format")
+    gr.add_argument("-o", "--output", help="export to this file instead of stdout")
+    gr.add_argument("--port", type=int, default=8765)
+    gr.add_argument("--runs", default=str(ROOT / "runs"), help="directory with run databases (serve)")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING if getattr(args, "quiet", False) else logging.INFO,
                         format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     return {"build-sandbox": cmd_build, "run": cmd_run, "report": cmd_report, "show": cmd_show,
-            "permissions": cmd_permissions}[args.cmd](args)
+            "permissions": cmd_permissions, "graph": cmd_graph}[args.cmd](args)
 
 
 if __name__ == "__main__":

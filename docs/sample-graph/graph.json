@@ -1,0 +1,1996 @@
+{
+  "run": {
+    "id": 1,
+    "name": "digits-cheap-vs-heavy",
+    "domain": "digits",
+    "objective": "Can cheap, fast models match a kernel SVM on 8x8 digits? Test each cheap family directly (Gaussian naive Bayes, depth-limited decision trees, kNN, plain linear models), each against the baseline and an RBF-SVM reference, rather than only chasing the best accuracy.",
+    "created_at": 1791969853.3800206
+  },
+  "nodes": [
+    {
+      "id": "r1:assumption:sandbox",
+      "type": "ASSUMPTION",
+      "title": "Methods are limited to one CPU, no network and the libraries in the sandbox image",
+      "summary": "",
+      "status": "accepted",
+      "confidence": null,
+      "epistemic": "constraint",
+      "details": {
+        "sandbox": {
+          "image": "autoresearch-sandbox:1",
+          "timeout_s": 120,
+          "memory": "1g",
+          "cpus": 1.0,
+          "pids": 128,
+          "network": "none",
+          "max_output_bytes": 20000
+        }
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791969853.3800206,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:assumption:threshold",
+      "type": "ASSUMPTION",
+      "title": "An improvement of at least 0.005 over the baseline is a real gain",
+      "summary": "The threshold 0.005 is below ~2 standard errors (0.0241) of an unpaired difference on 539 validation examples, so a 'success' near the threshold can be noise.",
+      "status": "questioned",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "min_improvement": 0.005,
+        "se_of_difference": 0.0121,
+        "n_val": 539
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791969853.3800206,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:assumption:val_proxy",
+      "type": "ASSUMPTION",
+      "title": "Validation accuracy on one fixed split reflects held-out performance",
+      "summary": "Across 7 scored runs, the rank correlation between validation and held-out test accuracy is 0.891. This checks the assumption; it does not prove it.",
+      "status": "consistent",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "why": "Agents only ever see validation scores; every decision is made on them.",
+        "spearman_val_test": 0.891,
+        "n_experiments": 7
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791969853.3800206,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:question:0",
+      "type": "QUESTION",
+      "title": "Can cheap, fast models match a kernel SVM on 8x8 digits? Test each cheap family directly (Gaussian naive Bayes, depth-limited decision trees, kNN, plain linear models), each against the baseline and an RBF-SVM reference, rather than only chasing the best accuracy.",
+      "summary": "Domain `digits`, metric: validation accuracy (higher is better).",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "domain": "digits",
+        "metric": "accuracy",
+        "higher_is_better": true,
+        "min_improvement": 0.005,
+        "n_val": 539
+      },
+      "source_table": "runs",
+      "source_id": 1,
+      "created_at": 1791969853.3800206,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:1",
+      "type": "EXPERIMENT",
+      "title": "Baseline run",
+      "summary": "val 0.9592, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 1,
+        "seed": 2651446862,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 1,
+            "attempt": 1,
+            "code_sha256": "3fd826ccff7d451f1b55f56a7c0bc333447c37c42cb95f16f49c08df51b6bd06"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791969853.384799,
+        "finished_at": 1791969855.3285706,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0001",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791969853.384799,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:baseline",
+      "type": "METHOD",
+      "title": "Baseline: standardised features + multinomial logistic regression",
+      "summary": "",
+      "status": "reference",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "code_version": 1
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791969853.384799,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e1",
+      "type": "EVIDENCE",
+      "title": "Baseline val accuracy 0.9592",
+      "summary": "",
+      "status": "reference",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9591836734693877,
+        "test": 0.9592592592592593,
+        "n_val": 539
+      },
+      "source_table": "experiments",
+      "source_id": 1,
+      "created_at": 1791969855.3285706,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:1",
+      "type": "HYPOTHESIS",
+      "title": "RBF-SVM reference + same-fold CV table of every cheap family",
+      "summary": "The objective asks for each cheap family to be compared against both the baseline (#1, 0.9592) and an RBF-SVM reference, and so far no reference exists.",
+      "status": "supported",
+      "confidence": "strong",
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "The objective asks for each cheap family to be compared against both the baseline (#1, 0.9592) and an RBF-SVM reference, and so far no reference exists. Scoring every family on the same stratified folds inside one script gives a fair comparison at the same scale, with fit and predict timings, and the validation score anchors the reference. An RBF-SVM on 8x8 digits usually reaches about 0.98-0.99, so it should also beat the baseline.",
+        "expected_metric": 0.986,
+        "priority": 0.9,
+        "parent_experiment_ids": [
+          1
+        ],
+        "researcher_call": 1,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 1,
+      "created_at": 1791970416.3267324,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h1",
+      "type": "METHOD",
+      "title": "Method: RBF-SVM reference + same-fold CV table of every cheap family",
+      "summary": "Load train.csv. Set up StratifiedKFold(5, shuffle=True, random_state=SEED). On these folds, score and time (fit + predict wall-clock) each of the following: GaussianNB with var_smoothing in {1e-9, 1e-2, 1e-1}; DecisionTreeClassifier with max_depth in {4, 6, 8, 12, None} (random_state=SEED); LogisticRegression (StandardScaler, C in {0.1, 1, 10}, max_iter=2000); kNN with k in {1, 3, 5} on raw pixels; and SVC(kernel='rbf') on X/16 with a small grid C in {3, 10, 30} x gamma in {'scale', 0.02, 0.05}. Print one line per config: family, params, CV mean \u00b1 std, and time. Refit the best SVC on all of train and write its val and test predictions. Total runtime should be under 60s.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv. Set up StratifiedKFold(5, shuffle=True, random_state=SEED). On these folds, score and time (fit + predict wall-clock) each of the following: GaussianNB with var_smoothing in {1e-9, 1e-2, 1e-1}; DecisionTreeClassifier with max_depth in {4, 6, 8, 12, None} (random_state=SEED); LogisticRegression (StandardScaler, C in {0.1, 1, 10}, max_iter=2000); kNN with k in {1, 3, 5} on raw pixels; and SVC(kernel='rbf') on X/16 with a small grid C in {3, 10, 30} x gamma in {'scale', 0.02, 0.05}. Print one line per config: family, params, CV mean \u00b1 std, and time. Refit the best SVC on all of train and write its val and test predictions. Total runtime should be under 60s.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 1,
+      "created_at": 1791970416.3267324,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:2",
+      "type": "HYPOTHESIS",
+      "title": "Direct kNN test: tuned k, weighting, metric and scaling vs SVM",
+      "summary": "kNN is the cheap family most likely to match a kernel SVM on digits, since it typically scores about 0.98 on 8x8 digits with no training cost.",
+      "status": "supported_not_best",
+      "confidence": "strong",
+      "epistemic": "benchmark",
+      "details": {
+        "rationale": "kNN is the cheap family most likely to match a kernel SVM on digits, since it typically scores about 0.98 on 8x8 digits with no training cost. To answer the research question directly, kNN's own predictions must be submitted rather than an ensemble. Baseline #1 (0.9592) is probably a linear model, so kNN should beat it, and the result shows how much of the gap to the RBF reference a nonparametric cheap model closes.",
+        "expected_metric": 0.982,
+        "priority": 0.8,
+        "parent_experiment_ids": [
+          1
+        ],
+        "researcher_call": 1,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 2,
+      "created_at": 1791970416.3277159,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h2",
+      "type": "METHOD",
+      "title": "Method: Direct kNN test: tuned k, weighting, metric and scaling vs SVM",
+      "summary": "Load train.csv. Run GridSearchCV (StratifiedKFold(5, shuffle=True, random_state=SEED)) over KNeighborsClassifier with n_neighbors in {1, 3, 4, 5, 7, 9}, weights in {'uniform', 'distance'} and p in {1, 2}, using two preprocessing options: raw pixels, or a PCA(n_components=40, whiten=False, random_state=SEED) pipeline. Print the top 5 configs with CV means and the inference time per 1000 samples. As an in-script reference, also print the 5-fold CV of SVC(rbf, C=10, gamma=0.02, on X/16) on the same folds. Refit the best kNN on all of train and write the kNN predictions (not the SVM's) to val_pred.csv and test_pred.csv.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv. Run GridSearchCV (StratifiedKFold(5, shuffle=True, random_state=SEED)) over KNeighborsClassifier with n_neighbors in {1, 3, 4, 5, 7, 9}, weights in {'uniform', 'distance'} and p in {1, 2}, using two preprocessing options: raw pixels, or a PCA(n_components=40, whiten=False, random_state=SEED) pipeline. Print the top 5 configs with CV means and the inference time per 1000 samples. As an in-script reference, also print the 5-fold CV of SVC(rbf, C=10, gamma=0.02, on X/16) on the same folds. Refit the best kNN on all of train and write the kNN predictions (not the SVM's) to val_pred.csv and test_pred.csv.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 2,
+      "created_at": 1791970416.3277159,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:2",
+      "type": "EXPERIMENT",
+      "title": "#2 RBF-SVM reference + same-fold CV table of every cheap family",
+      "summary": "val 0.9889, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 2,
+        "seed": 2180304826,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 3,
+            "attempt": 1,
+            "code_sha256": "59179d7e2661bb0608002c4728c0b6f2c6f19d5e38ad732592f1f7f765b40b40"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970416.3296256,
+        "finished_at": 1791970467.3170838,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0002",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791970416.3296256,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:3",
+      "type": "EXPERIMENT",
+      "title": "#3 Direct kNN test: tuned k, weighting, metric and scaling vs SVM",
+      "summary": "val 0.9889, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 3,
+        "seed": 2309489637,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 2,
+            "attempt": 1,
+            "code_sha256": "10c884027835c9575a55c18f9538a2ab0570e90315dc92df341797a832435eb2"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970416.3434284,
+        "finished_at": 1791970468.0953112,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0003",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791970416.3434284,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:conclusion:e2",
+      "type": "CONCLUSION",
+      "title": "Current best: RBF-SVM reference + same-fold CV table of every cheap family (val 0.9889)",
+      "summary": "Held-out test 0.9815. Provisional: holds until a better result arrives, and rests on the run's assumptions.",
+      "status": "current",
+      "confidence": "strong",
+      "epistemic": "empirical",
+      "details": {
+        "experiment": 2,
+        "val": 0.9888682745825603,
+        "test": 0.9814814814814815
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791970467.3170838,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e2",
+      "type": "DECISION",
+      "title": "Adopt: RBF-SVM reference + same-fold CV table of every cheap family",
+      "summary": "Best validation accuracy so far; it becomes the current best method.",
+      "status": "adopt",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val accuracy 0.9860. Best before this result: baseline 0.9592.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:2",
+            "title": "Direct kNN test: tuned k, weighting, metric and scaling vs SVM"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e2"
+        ],
+        "affected": [
+          "r1:hyp:1"
+        ],
+        "why": "Best validation accuracy so far; it becomes the current best method.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:3",
+            "title": "Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM",
+            "rationale": "#2 ran LogisticRegression only on a coarse C grid as part of a broad table, and the kNN family is already queued. The objective asks for each cheap family to be tested on its own, and plain linear models have not been. Digits are close to linearly separable, so a well-tuned linear model should land near 0.96-0.975, which would put it between the baseline (0.9592) and the RBF-SVM (CV 0.9763, val 0.9889). Running the SVC on the same folds keeps the comparison direct."
+          },
+          {
+            "hypothesis": "r1:hyp:4",
+            "title": "Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees",
+            "rationale": "In #2, GaussianNB and decision trees only got minimal grids. GNB's independence assumption breaks down on correlated pixels. Decorrelating them with PCA first (PCA+GNB amounts to roughly QDA with diagonal covariance in PCA space) should lift GNB from about 0.8 to about 0.93-0.95 while keeping it cheap. Trees need a direct depth-vs-accuracy curve to answer whether they can match an SVM, and they almost certainly can't. This answers the objective for the two weakest families."
+          },
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+            "rationale": "In #3, 1-NN with Euclidean distance on raw pixels matched the SVM on validation (0.9889) and had a higher CV score (0.9791 vs 0.9763). #3 also showed that weighting and unwhitened PCA did nothing, so the remaining gains should come from feature transforms. With only 718 training images, 1-NN is limited by sample coverage, and adding \u00b11-pixel shifted copies of the training images is a cheap way to cover small translations. #2 noted that the SVM reference was never tuned over gamma. A fair head-to-head needs a tuned SVM as well, so both are tuned here."
+          },
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+            "rationale": "In #4, plain linear models plateaued at about 0.961 and the lesson pointed to nonlinear features. This experiment tests whether a cheap linear learner placed on an explicit nonlinear feature map closes the gap to the kernel SVM. That directly answers whether the 'linear' family can match the SVM, at a measurable cost in features and time."
+          }
+        ],
+        "uncertain": [
+          "Only one candidate has beaten the baseline so far."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791970467.3170838,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e2",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9889 (+0.0297 vs baseline)",
+      "summary": "Held-out test 0.9815 (never shown to agents).",
+      "status": "supports",
+      "confidence": "strong",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9888682745825603,
+        "test": 0.9814814814814815,
+        "baseline_val": 0.9591836734693877,
+        "improvement": 0.029684601113172615,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 3e-05,
+          "only_new_right": 16,
+          "only_ref_right": 0
+        },
+        "n_val": 539,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The hypothesis predicted that an RBF-SVM reference would reach about 0.986 and beat the 0.9592 baseline. It is supported: the SVC (C=3, gamma=scale, on X/16) scored 0.9889 on validation, +0.0297 over the baseline, about 6x the 0.005 success threshold. The same-fold table was also produced. Best per family on the 5 folds (CV mean \u00b1 std, change vs baseline, fit+predict time): kNN raw k=1 0.9847\u00b10.0081 (+0.0255, 0.017s); SVC-rbf 0.9763\u00b10.0056 (+0.0171, 0.051s); LogReg+Scaler C=1 0.9568\u00b10.0135 (-0.0024, 0.045s); GaussianNB var_smoothing=0.1 0.9108\u00b10.0272 (-0.0484, 0.007s); DecisionTree depth=None 0.8035\u00b10.0344 (-0.1557, 0.028s). Total runtime was 0.8s. Caveats: (1) kNN k=1 beat the SVC in CV by 0.0084, but the refit only chose among SVC configs, so the submitted model is not the best model in CV. (2) The SVC's validation score (0.9889) is 0.0126 above its own CV mean (0.9763), about 2 fold standard deviations, so part of the validation gain is likely luck of the single split. (3) With gamma=scale, C=3, 10 and 30 gave the same score (0.9763) to four decimals, so C had no effect there. The fixed gammas 0.02 and 0.05 scored worse (0.9638-0.9735), with 0.05 > 0.02 at every C. This suggests the best gamma is at or above the 'scale' value, which was never tried directly. (4) kNN k=1 and the SVC differ by about one fold standard deviation, so 5-fold CV cannot reliably separate them.",
+        "analyst_lessons": [
+          "The RBF-SVM reference on X/16 is set: CV 0.9763\u00b10.0056, validation 0.9889. Report future cheap models against both this and the baseline (0.9592).",
+          "kNN with k=1 on raw pixels is the best cheap family in CV (0.9847, 0.017s), beating the SVC by 0.0084 and the k=3 and k=5 variants by about 0.016. Next, try distance-weighted kNN, scaled kNN, or PCA followed by kNN.",
+          "With gamma=scale, SVC C made no difference for C in 3-30 (identical 0.9763). Search over gamma instead, at or above the 'scale' value (e.g. 0.1-0.5 on X/16), since 0.02 and 0.05 both scored worse and 0.05 beat 0.02 at every C.",
+          "The validation score ran 0.0126 above the CV mean, about 2 fold standard deviations. Rank models by same-fold CV (ideally repeated) rather than the single validation split, and treat gaps under about 0.01 as noise.",
+          "The refit step should choose the best model across all families, not just within one family; otherwise the strongest CV model (kNN k=1 here) is never submitted.",
+          "Logistic regression (0.9568), GaussianNB (0.9108) and single decision trees (0.8035) do not beat the baseline. Deprioritize them except as ensemble members.",
+          "The full 5-fold sweep of 26 configs ran in 0.8s, so much larger grids, repeated CV, or ensembles fit easily in the 60s budget."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 2,
+      "created_at": 1791970467.3170838,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:open:threshold",
+      "type": "OPEN_QUESTION",
+      "title": "Do the threshold-level 'successes' survive a noise check?",
+      "summary": "The success threshold is below the noise level of the validation split; successes close to it should be re-checked before being relied on.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {},
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791970467.3170838,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e3",
+      "type": "DECISION",
+      "title": "Deprioritize: Direct kNN test: tuned k, weighting, metric and scaling vs SVM",
+      "summary": "Beat the baseline but ties the current best #2 (0.9889); the earlier result stays current. A benchmark ranking, not a refutation.",
+      "status": "deprioritize",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "before": "Predicted val accuracy 0.9820. Best before this result: #2 0.9889.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:1",
+            "title": "RBF-SVM reference + same-fold CV table of every cheap family"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e3"
+        ],
+        "affected": [
+          "r1:hyp:2"
+        ],
+        "why": "Beat the baseline but ties the current best #2 (0.9889); the earlier result stays current. A benchmark ranking, not a refutation.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+            "rationale": "In #3, 1-NN with Euclidean distance on raw pixels matched the SVM on validation (0.9889) and had a higher CV score (0.9791 vs 0.9763). #3 also showed that weighting and unwhitened PCA did nothing, so the remaining gains should come from feature transforms. With only 718 training images, 1-NN is limited by sample coverage, and adding \u00b11-pixel shifted copies of the training images is a cheap way to cover small translations. #2 noted that the SVM reference was never tuned over gamma. A fair head-to-head needs a tuned SVM as well, so both are tuned here."
+          }
+        ],
+        "uncertain": [
+          "The gap to #2 is within noise (paired McNemar p=1); it may be as good."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791970468.0953112,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e3",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9889 (+0.0297 vs baseline)",
+      "summary": "Held-out test 0.9815 (never shown to agents).",
+      "status": "supports",
+      "confidence": "strong",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9888682745825603,
+        "test": 0.9814814814814815,
+        "baseline_val": 0.9591836734693877,
+        "improvement": 0.029684601113172615,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 0.0004,
+          "only_new_right": 18,
+          "only_ref_right": 2
+        },
+        "n_val": 539,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "Using only its own predictions, the best kNN scored 0.9889 validation accuracy against a 0.9592 baseline: +0.0297, about 6x the 0.005 success threshold, and above the predicted 0.982. On 539 validation samples that is about 6 errors (SE about 0.0045), so the gain is well outside noise. Validation came in about 1 point above the best CV score (0.9791 +/- 0.0132), which is within the fold spread, so CV looks slightly pessimistic rather than overfit. The top 4 configs all used k=1 with Euclidean distance (p=2) and tied at CV 0.9791. These are partly the same model: with k=1, uniform and distance weighting give identical predictions, and unwhitened PCA40 kept distances close enough to match raw pixels exactly. So the grid had one real winner, and neither weighting nor PCA40 changed accuracy. Manhattan distance (p=1) was worse (0.9750, -0.004) and about 3x slower at inference (16.9 vs about 5 ms per 1000 samples). No config with k>1 reached the top 5, which fits the small 718-sample training set. The full grid search took 1.3 s. The in-script RBF SVM scored CV 0.9694 (kNN +0.0098), but that SVM used one untuned setting (C=10, gamma=0.02 on X/16). That gamma is likely too small for [0,1]-scaled pixels; typical good values are about 0.1-0.3, where a tuned RBF SVM usually reaches about 0.985-0.99. The result therefore does not show that kNN beats a kernel SVM, only that it beats this particular SVM setting.",
+        "analyst_lessons": [
+          "kNN with k=1 and Euclidean distance (p=2) on raw pixels reached 0.9889 val / 0.9791 CV in about 1 s total, making it a strong, nearly free model to beat on this digits split (718 train samples).",
+          "With k=1, the choice between uniform and distance weighting has no effect, and PCA40 (unwhitened) matched raw pixels exactly. Future kNN grids should drop these redundant options and spend the budget on k in {1,2,3} and on distance metrics or feature transforms (e.g. deskewing, HOG, whitened or lower-dimensional PCA).",
+          "Manhattan distance (p=1) cost about 0.004 CV and was about 3x slower at inference than p=2, so prefer Euclidean.",
+          "The in-script SVM reference (C=10, gamma=0.02 on X/16, CV 0.9694) was probably mis-tuned. Before claiming kNN matches or beats an SVM, grid-search gamma around 0.05-0.5 on X/16 and C in {1,10,100}.",
+          "Validation came in about 1 point above CV, with a CV std of about 0.013 across 5 folds of 718 samples. Differences under about 0.005 in CV are not meaningful here, so use repeated CV to rank close configs.",
+          "The new best to beat is 0.9889. Next candidates: a properly tuned RBF SVM, a kNN+SVM ensemble, or training-data augmentation by small pixel shifts, which directly helps 1-NN."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 3,
+      "created_at": 1791970468.0953112,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:open:top2_2_3",
+      "type": "OPEN_QUESTION",
+      "title": "Which is better, #2 or #3?",
+      "summary": "Their validation accuracy differs by 0.0000 (paired McNemar p=1), within the noise of one split. Next useful experiment: compare both with repeated cross-validation on the training split, or several seeds.",
+      "status": "open",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiments": [
+          2,
+          3
+        ],
+        "comparison": {
+          "test": "paired McNemar (exact)",
+          "p": 1.0,
+          "only_new_right": 2,
+          "only_ref_right": 2
+        },
+        "suggested_experiment": "repeated CV / multi-seed comparison"
+      },
+      "source_table": null,
+      "source_id": null,
+      "created_at": 1791970468.0953112,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:3",
+      "type": "HYPOTHESIS",
+      "title": "Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM",
+      "summary": "#2 ran LogisticRegression only on a coarse C grid as part of a broad table, and the kNN family is already queued.",
+      "status": "not_supported",
+      "confidence": "weak",
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "#2 ran LogisticRegression only on a coarse C grid as part of a broad table, and the kNN family is already queued. The objective asks for each cheap family to be tested on its own, and plain linear models have not been. Digits are close to linearly separable, so a well-tuned linear model should land near 0.96-0.975, which would put it between the baseline (0.9592) and the RBF-SVM (CV 0.9763, val 0.9889). Running the SVC on the same folds keeps the comparison direct.",
+        "expected_metric": 0.97,
+        "priority": 0.8,
+        "parent_experiment_ids": [
+          2
+        ],
+        "researcher_call": 6,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 3,
+      "created_at": 1791970485.7163868,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h3",
+      "type": "METHOD",
+      "title": "Method: Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM",
+      "summary": "Load train.csv, X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). On the same folds, score and time (fit+predict) the following: (a) LogisticRegression (multinomial, lbfgs, max_iter=3000) with StandardScaler vs X/16 only, C in {0.01,0.03,0.1,0.3,1,3}; (b) LinearSVC (dual='auto', max_iter=5000) with C in {0.001,0.01,0.1,1}; (c) RidgeClassifier with alpha in {0.1,1,10,100}; (d) SGDClassifier(loss='log_loss', random_state=SEED). Also run the reference SVC(rbf, C=10) with gamma in {scale, 0.1, 0.2, 0.3} on X/16. Print a table of mean\u00b1std CV accuracy and time, plus the gap to the best SVC and to the baseline 0.9592. Refit the best LINEAR config on all of train and write its val/test predictions, so the validation score measures the linear family. Print the best SVC's CV for reference.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv, X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). On the same folds, score and time (fit+predict) the following: (a) LogisticRegression (multinomial, lbfgs, max_iter=3000) with StandardScaler vs X/16 only, C in {0.01,0.03,0.1,0.3,1,3}; (b) LinearSVC (dual='auto', max_iter=5000) with C in {0.001,0.01,0.1,1}; (c) RidgeClassifier with alpha in {0.1,1,10,100}; (d) SGDClassifier(loss='log_loss', random_state=SEED). Also run the reference SVC(rbf, C=10) with gamma in {scale, 0.1, 0.2, 0.3} on X/16. Print a table of mean\u00b1std CV accuracy and time, plus the gap to the best SVC and to the baseline 0.9592. Refit the best LINEAR config on all of train and write its val/test predictions, so the validation score measures the linear family. Print the best SVC's CV for reference.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 3,
+      "created_at": 1791970485.7163868,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:4",
+      "type": "HYPOTHESIS",
+      "title": "Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees",
+      "summary": "In #2, GaussianNB and decision trees only got minimal grids.",
+      "status": "not_supported",
+      "confidence": "weak",
+      "epistemic": "empirical",
+      "details": {
+        "rationale": "In #2, GaussianNB and decision trees only got minimal grids. GNB's independence assumption breaks down on correlated pixels. Decorrelating them with PCA first (PCA+GNB amounts to roughly QDA with diagonal covariance in PCA space) should lift GNB from about 0.8 to about 0.93-0.95 while keeping it cheap. Trees need a direct depth-vs-accuracy curve to answer whether they can match an SVM, and they almost certainly can't. This answers the objective for the two weakest families.",
+        "expected_metric": 0.94,
+        "priority": 0.6,
+        "parent_experiment_ids": [
+          2
+        ],
+        "researcher_call": 6,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 4,
+      "created_at": 1791970485.7174335,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h4",
+      "type": "METHOD",
+      "title": "Method: Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees",
+      "summary": "Load train.csv, X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). On the same folds, score and time: (a) GaussianNB on raw pixels with var_smoothing in {1e-9,1e-3,1e-2,0.05,0.1,0.2}; (b) Pipeline(PCA(n_components=k, whiten=True/False, random_state=SEED), GaussianNB) for k in {10,15,20,30,40}; (c) QuadraticDiscriminantAnalysis(reg_param in {0.01,0.1,0.3}) on PCA-30 as a related cheap generative model; (d) DecisionTreeClassifier with max_depth in {3,4,6,8,10,None}, min_samples_leaf in {1,3}, criterion gini/entropy, random_state=SEED. Run the reference SVC(rbf, C=10, gamma='scale') on the same folds. Print a table of mean\u00b1std CV and time, plus gaps to the SVC and to the baseline 0.9592. Refit the best NB-family config (GNB or PCA+GNB only, not QDA or tree) on all of train and write its val/test predictions, so validation measures the NB family. Print the best tree's CV for comparison.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv, X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). On the same folds, score and time: (a) GaussianNB on raw pixels with var_smoothing in {1e-9,1e-3,1e-2,0.05,0.1,0.2}; (b) Pipeline(PCA(n_components=k, whiten=True/False, random_state=SEED), GaussianNB) for k in {10,15,20,30,40}; (c) QuadraticDiscriminantAnalysis(reg_param in {0.01,0.1,0.3}) on PCA-30 as a related cheap generative model; (d) DecisionTreeClassifier with max_depth in {3,4,6,8,10,None}, min_samples_leaf in {1,3}, criterion gini/entropy, random_state=SEED. Run the reference SVC(rbf, C=10, gamma='scale') on the same folds. Print a table of mean\u00b1std CV and time, plus gaps to the SVC and to the baseline 0.9592. Refit the best NB-family config (GNB or PCA+GNB only, not QDA or tree) on all of train and write its val/test predictions, so validation measures the NB family. Print the best tree's CV for comparison.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 4,
+      "created_at": 1791970485.7174335,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:4",
+      "type": "EXPERIMENT",
+      "title": "#4 Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM",
+      "summary": "val 0.9629, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 4,
+        "seed": 349067868,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 4,
+            "attempt": 1,
+            "code_sha256": "fe4d5eff9a174295a49a9e5138542c8d414705add7b33e10b0e20bb13ff3cccf"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970485.7198858,
+        "finished_at": 1791970530.8199685,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0004",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791970485.7198858,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:5",
+      "type": "EXPERIMENT",
+      "title": "#5 Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees",
+      "summary": "val 0.9425, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 5,
+        "seed": 539710769,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 5,
+            "attempt": 1,
+            "code_sha256": "ffc22eb6d789a42fd230c8f00953fa5738972fb718f9bd242bb5d9ab39724055"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970485.7357976,
+        "finished_at": 1791970531.400143,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0005",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791970485.7357976,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e4",
+      "type": "DECISION",
+      "title": "Set aside: Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM",
+      "summary": "No detectable gain (improvement +0.0037 < 0.005). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+      "status": "set_aside",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val accuracy 0.9700. Best before this result: #2 0.9889.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:4",
+            "title": "Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e4"
+        ],
+        "affected": [
+          "r1:hyp:3"
+        ],
+        "why": "No detectable gain (improvement +0.0037 < 0.005). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+        "why_next": [
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+            "rationale": "In #4, plain linear models plateaued at about 0.961 and the lesson pointed to nonlinear features. This experiment tests whether a cheap linear learner placed on an explicit nonlinear feature map closes the gap to the kernel SVM. That directly answers whether the 'linear' family can match the SVM, at a measurable cost in features and time."
+          }
+        ],
+        "uncertain": [
+          "Whether a small real effect exists: one split cannot resolve it.",
+          "The difference from the baseline is within noise (paired McNemar p=0.754).",
+          "The researcher predicted 0.9700 and measured 0.9629: its own prediction held. It is judged here against the loop's fixed 'beat the baseline' criterion, which may not be what this hypothesis asked."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791970530.8199685,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e4",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9629 (+0.0037 vs baseline)",
+      "summary": "Held-out test 0.9630 (never shown to agents).",
+      "status": "contradicts",
+      "confidence": "weak",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9628942486085343,
+        "test": 0.9629629629629629,
+        "baseline_val": 0.9591836734693877,
+        "improvement": 0.0037105751391466324,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 0.75391,
+          "only_new_right": 6,
+          "only_ref_right": 4
+        },
+        "n_val": 539,
+        "analyst_verdict": "refuted",
+        "analyst_analysis": "The prediction was that a tuned linear model would land between 0.96 and 0.975, at about 0.97. It didn't. The best linear config, LinearSVC C=1, scored 0.9610\u00b10.0137 in cross-validation and 0.9629 on validation. That is only +0.0037 over the 0.9592 baseline, below the 0.005 success threshold, and 0.026 below the best result so far (RBF-SVM, val 0.9889).\n\nOn the same folds, the RBF-SVC (C=10) beat every linear model by at least 0.0167 in cross-validation (0.9777 vs 0.9610). That gap is larger than one fold-std (about 0.011\u20130.014), so the nonlinear kernel really does help on this data. The rationale's assumption that digits are close to linearly separable doesn't hold strongly enough here.\n\nWithin the linear family:\n- **LogisticRegression:** best was 0.9540 (StandardScaler, C=0.3). Scaling helped a little at low C but made little difference at its best setting.\n- **SGD (log_loss):** 0.9512.\n- **RidgeClassifier:** peaked at 0.9275.\n\nAll the gaps between LinearSVC C=1, LogReg C=0.3\u20133 and SGD are smaller than one fold-std, so their ranking is noise-level. Accuracy rose steadily with C for both LinearSVC and LogReg on X/16. The best values (LinearSVC C=1, LogReg raw C=3) sit at the top edge of their grids, so higher C wasn't tested. It's unlikely to close a gap of more than 0.015.\n\nThe SVC gamma choice barely matters: 0.2 and 0.3 both gave 0.9777, against 0.9763 for 'scale' and 0.9749 for 0.1, all well inside the noise. Everything is cheap: each config took about 0.1 s or less to fit and predict, and the whole run took 1.3 s. Speed is not a reason to pick one family over another.",
+        "analyst_lessons": [
+          "On this data, linear models max out around 0.961 in CV and 0.963 on validation (LinearSVC C=1). That is about 0.017 below the RBF-SVC in CV and 0.026 below the best validation score (0.9889). Don't spend more experiments on plain linear classifiers on raw pixels.",
+          "The nonlinear kernel is doing real work, and the RBF-SVC's lead over linear models is larger than the fold-std of about 0.012. Improvements should come from nonlinear models or nonlinear features (polynomial or RBF feature maps, ensembles), not from more regularisation tuning.",
+          "Ridge (\u22640.928) and low-C linear models (C\u22640.01 gave 0.876\u20130.93) underfit badly. Linear models here want weak regularisation (C\u22651), and the best C sat at the top of the grid.",
+          "RBF-SVC gamma in {0.2, 0.3, scale} gives the same CV result (0.9763\u20130.9777) within noise. Re-tuning gamma is not worth an experiment.",
+          "The CV fold-std of about 0.011\u20130.025 means differences under about 0.015 between configs can't be told apart. Use repeated CV or more folds before claiming gains of 0.005 or less.",
+          "Every model here takes 0.1 s or less per CV fold, so compute is no constraint. Heavier methods (ensembles, stacking, augmentation) are affordable."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 4,
+      "created_at": 1791970530.8199685,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e5",
+      "type": "DECISION",
+      "title": "Set aside: Direct NB & shallow-tree test: PCA-whitened GaussianNB and depth-limited trees",
+      "summary": "Lower than the baseline (-0.0167), but not significantly (paired McNemar p=0.136). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+      "status": "set_aside",
+      "confidence": null,
+      "epistemic": "empirical",
+      "details": {
+        "before": "Predicted val accuracy 0.9400. Best before this result: #2 0.9889.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:3",
+            "title": "Direct linear-model test: tuned LogReg / LinearSVC / Ridge vs SVM"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e5"
+        ],
+        "affected": [
+          "r1:hyp:4"
+        ],
+        "why": "Lower than the baseline (-0.0167), but not significantly (paired McNemar p=0.136). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+        "why_next": [],
+        "uncertain": [
+          "Whether a small real effect exists: one split cannot resolve it.",
+          "The difference from the baseline is within noise (paired McNemar p=0.136).",
+          "The researcher predicted 0.9400 and measured 0.9425: its own prediction held. It is judged here against the loop's fixed 'beat the baseline' criterion, which may not be what this hypothesis asked."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791970531.400143,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e5",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9425 (-0.0167 vs baseline)",
+      "summary": "Held-out test 0.9407 (never shown to agents).",
+      "status": "contradicts",
+      "confidence": "weak",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9424860853432282,
+        "test": 0.9407407407407408,
+        "baseline_val": 0.9591836734693877,
+        "improvement": -0.016697588126159513,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 0.13605,
+          "only_new_right": 10,
+          "only_ref_right": 19
+        },
+        "n_val": 539,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "The hypothesis was a diagnostic one, and both of its claims held. Its overall score was still a regression.\n\n1. **PCA before GaussianNB helps.** GaussianNB on raw pixels peaked at 0.9122\u00b10.0105 CV (var_smoothing=0.05). PCA-40 with whitening followed by GaussianNB reached 0.9359\u00b10.0240 CV, a gain of +0.024. On validation it scored 0.9425, which matches the predicted 0.94 and falls inside the predicted 0.93\u20130.95 band. The \"about 0.8\" starting point in the rationale was too pessimistic: tuned raw GaussianNB was already at 0.91.\n2. **Trees cannot match the SVC.** The best tree (entropy, depth 10, min_samples_leaf=1) reached 0.8037\u00b10.0344 CV, 0.17 below the SVC (0.9735\u00b10.0069). Accuracy levels off by depth 8\u201310: depth=None gives the same score as depth=10. Shallow trees are much worse (depth 3 \u2248 0.53\u20130.56, depth 4 \u2248 0.64).\n\nAgainst the target, validation of 0.9425 is 0.0167 below the 0.9592 baseline and far below the best so far (0.9889), so this is not a success. That was expected, since the experiment deliberately submitted the naive Bayes family.\n\nThe most useful side result is that PCA-30 + QDA (reg_param=0.01) scored 0.9777\u00b10.0142 CV. That is +0.004 above the SVC on the same folds, but within noise, because its fold standard deviation is twice the SVC's. QDA used only PCA-30 and the smallest reg_param tried, so neither setting has been tuned. For PCA+GNB, k=40 was the largest value in the grid, so the best k may be higher. The whole run took 1.2 s, so wider grids cost almost nothing.",
+        "analyst_lessons": [
+          "Putting PCA (k=40, whiten=True) before GaussianNB raised CV from 0.912 to 0.936 and gave 0.9425 on validation. The naive Bayes family is still about 0.04 below the SVC and should not be developed further.",
+          "Decision trees top out at about 0.80 CV (depth 10; no depth limit is no better). Single trees are ruled out. Only ensembles of trees are worth considering.",
+          "PCA-30 + QDA (reg_param=0.01) scored 0.9777\u00b10.0142 CV against 0.9735\u00b10.0069 for the SVC on the same folds. Next, try QDA with PCA k in {20\u201360} and reg_param in {0.001\u20130.05}, and consider adding it to an ensemble with SVC or kNN.",
+          "The best k (40) was at the edge of the grid. Whenever a best value lands on a boundary, widen the grid; at about 1 s per full run this costs almost nothing.",
+          "QDA and PCA+GNB vary a lot across folds (std 0.014\u20130.024), so CV gaps under about 0.01 should not be treated as real. Use repeated CV before claiming a gain over the SVC."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 5,
+      "created_at": 1791970531.400143,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:5",
+      "type": "HYPOTHESIS",
+      "title": "Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+      "summary": "In #3, 1-NN with Euclidean distance on raw pixels matched the SVM on validation (0.9889) and had a higher CV score (0.9791 vs 0.9763).",
+      "status": "supported_not_best",
+      "confidence": "strong",
+      "epistemic": "benchmark",
+      "details": {
+        "rationale": "In #3, 1-NN with Euclidean distance on raw pixels matched the SVM on validation (0.9889) and had a higher CV score (0.9791 vs 0.9763). #3 also showed that weighting and unwhitened PCA did nothing, so the remaining gains should come from feature transforms. With only 718 training images, 1-NN is limited by sample coverage, and adding \u00b11-pixel shifted copies of the training images is a cheap way to cover small translations. #2 noted that the SVM reference was never tuned over gamma. A fair head-to-head needs a tuned SVM as well, so both are tuned here.",
+        "expected_metric": 0.9917,
+        "priority": 0.85,
+        "parent_experiment_ids": [
+          2,
+          3
+        ],
+        "researcher_call": 11,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 5,
+      "created_at": 1791970549.9941416,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h5",
+      "type": "METHOD",
+      "title": "Method: Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+      "summary": "Load train.csv and reshape X to (n,8,8). Define these transforms: (a) raw; (b) deskew, i.e. compute image moments, then shear by -mu11/mu02 using scipy.ndimage.affine_transform (order=1); (c) augmentation, i.e. add copies of the training images shifted by 1 pixel in each of the 4 directions (np.roll with the wrapped edge zero-filled), applied only to the training part of each fold; (d) deskew followed by augmentation. Use StratifiedKFold(5, shuffle=True, random_state=SEED) and augment only the training fold. For each transform, score KNeighborsClassifier with k in {1,3} and p=2, recording the CV mean, std and fit+predict time. On the same folds, tune SVC(RBF) on X/16 with gamma in {0.02,0.05,0.1,0.2,0.4} and C in {1,10}, also on the deskewed features. Print one table that compares every result to the baseline 0.9592 and to the tuned SVM. Pick the cheap kNN config with the best CV mean; if it is within 0.002 of the best SVM, prefer kNN. Refit on all of train (with augmentation if the chosen config uses it), then predict val and test.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv and reshape X to (n,8,8). Define these transforms: (a) raw; (b) deskew, i.e. compute image moments, then shear by -mu11/mu02 using scipy.ndimage.affine_transform (order=1); (c) augmentation, i.e. add copies of the training images shifted by 1 pixel in each of the 4 directions (np.roll with the wrapped edge zero-filled), applied only to the training part of each fold; (d) deskew followed by augmentation. Use StratifiedKFold(5, shuffle=True, random_state=SEED) and augment only the training fold. For each transform, score KNeighborsClassifier with k in {1,3} and p=2, recording the CV mean, std and fit+predict time. On the same folds, tune SVC(RBF) on X/16 with gamma in {0.02,0.05,0.1,0.2,0.4} and C in {1,10}, also on the deskewed features. Print one table that compares every result to the baseline 0.9592 and to the tuned SVM. Pick the cheap kNN config with the best CV mean; if it is within 0.002 of the best SVM, prefer kNN. Refit on all of train (with augmentation if the chosen config uses it), then predict val and test.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 5,
+      "created_at": 1791970549.9941416,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:hyp:6",
+      "type": "HYPOTHESIS",
+      "title": "Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+      "summary": "In #4, plain linear models plateaued at about 0.961 and the lesson pointed to nonlinear features.",
+      "status": "supported_not_best",
+      "confidence": "moderate",
+      "epistemic": "benchmark",
+      "details": {
+        "rationale": "In #4, plain linear models plateaued at about 0.961 and the lesson pointed to nonlinear features. This experiment tests whether a cheap linear learner placed on an explicit nonlinear feature map closes the gap to the kernel SVM. That directly answers whether the 'linear' family can match the SVM, at a measurable cost in features and time.",
+        "expected_metric": 0.986,
+        "priority": 0.7,
+        "parent_experiment_ids": [
+          4,
+          2
+        ],
+        "researcher_call": 11,
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 6,
+      "created_at": 1791970549.995309,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:method:h6",
+      "type": "METHOD",
+      "title": "Method: Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+      "summary": "Load train.csv and set X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). Score and time these pipelines: (a) Nystroem(kernel='rbf', gamma in {0.05,0.1,0.2}, n_components in {100,300,600}, random_state=SEED) followed by LogisticRegression(C=10, max_iter=3000); (b) RBFSampler(gamma in {0.05,0.1}, n_components in {500,1500}, random_state=SEED) followed by LinearSVC(C=1, dual='auto', max_iter=5000); (c) PolynomialFeatures(degree=2, interaction_only=False) then StandardScaler then LogisticRegression with C in {0.1,1}; (d) a reference SVC(RBF) with gamma in {0.05,0.1,0.2} and C=10. Print the CV mean, std, fit+predict time and feature dimension for each, with deltas against the baseline (0.9592) and the best SVC. Pick the best non-SVC config by CV mean, refit it on all of train and predict val and test.",
+      "status": "",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "method": "Load train.csv and set X=X/16. Use StratifiedKFold(5, shuffle=True, random_state=SEED). Score and time these pipelines: (a) Nystroem(kernel='rbf', gamma in {0.05,0.1,0.2}, n_components in {100,300,600}, random_state=SEED) followed by LogisticRegression(C=10, max_iter=3000); (b) RBFSampler(gamma in {0.05,0.1}, n_components in {500,1500}, random_state=SEED) followed by LinearSVC(C=1, dual='auto', max_iter=5000); (c) PolynomialFeatures(degree=2, interaction_only=False) then StandardScaler then LogisticRegression with C in {0.1,1}; (d) a reference SVC(RBF) with gamma in {0.05,0.1,0.2} and C=10. Print the CV mean, std, fit+predict time and feature dimension for each, with deltas against the baseline (0.9592) and the best SVC. Pick the best non-SVC config by CV mean, refit it on all of train and predict val and test.",
+        "text_origin": "recorded (researcher)"
+      },
+      "source_table": "hypotheses",
+      "source_id": 6,
+      "created_at": 1791970549.995309,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:6",
+      "type": "EXPERIMENT",
+      "title": "#6 Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+      "summary": "val 0.9870, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 6,
+        "seed": 1707495714,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 7,
+            "attempt": 1,
+            "code_sha256": "8602be349483266c194879d34cba24cb5e1cb44b29db6c77b68b13217d44a8aa"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970550.0005538,
+        "finished_at": 1791970611.2199097,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0006",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791970550.0005538,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:exp:7",
+      "type": "EXPERIMENT",
+      "title": "#7 Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+      "summary": "val 0.9796, 1 attempt(s)",
+      "status": "completed",
+      "confidence": null,
+      "epistemic": null,
+      "details": {
+        "experiment_id": 7,
+        "seed": 510227197,
+        "attempts": 1,
+        "code_versions": [
+          {
+            "id": 6,
+            "attempt": 1,
+            "code_sha256": "db914a342cb29a4bc50ce11d88e6e2c569839e1c47e8089cdb7b29ee4e0c3185"
+          }
+        ],
+        "system_revision": "7c2a05d96f32",
+        "started_at": 1791970550.0148563,
+        "finished_at": 1791970610.839487,
+        "workspace": "C:\\Users\\lee\\automated_research\\runs\\digits-cheap-vs-heavy\\exp_0007",
+        "error": null
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791970550.0148563,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e7",
+      "type": "DECISION",
+      "title": "Deprioritize: Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM",
+      "summary": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+      "status": "deprioritize",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "before": "Predicted val accuracy 0.9860. Best before this result: #2 0.9889.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:5",
+            "title": "Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e7"
+        ],
+        "affected": [
+          "r1:hyp:6"
+        ],
+        "why": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+        "why_next": [],
+        "uncertain": [
+          "The gap to #2 is within noise (paired McNemar p=0.0625); it may be as good."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791970610.839487,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e7",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9796 (+0.0204 vs baseline)",
+      "summary": "Held-out test 0.9722 (never shown to agents).",
+      "status": "supports",
+      "confidence": "moderate",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.9795918367346939,
+        "test": 0.9722222222222222,
+        "baseline_val": 0.9591836734693877,
+        "improvement": 0.020408163265306145,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 0.00739,
+          "only_new_right": 13,
+          "only_ref_right": 2
+        },
+        "n_val": 539,
+        "analyst_verdict": "supported",
+        "analyst_analysis": "Against the linear baseline the result clears the bar: Nystroem(rbf, gamma=0.2, 300 components) followed by LogisticRegression(C=10) scored 0.9796 on validation. That is +0.0204 over the 0.9592 baseline, about four times the 0.005 success threshold. Its CV score was 0.9722\u00b10.0252, +0.013 over baseline. So adding explicit nonlinear features does lift the linear family well past the ~0.961 plateau.\n\nThe stronger claim in the rationale, that these models close the gap to the kernel SVM, is not supported:\n- **Gap to the SVM:** every feature-map model scored below the reference SVC in CV. The best SVC (gamma=0.1, C=10) reached 0.9777\u00b10.0134. The best Nystroem models trailed it by 0.0056, and the best RFF model (1500 components) by 0.0084.\n- **Other targets:** validation came in below the predicted 0.986 (\u22120.0064) and well below the best result before this experiment, 0.9889 (\u22120.0093).\n- **Cost:** the feature maps were no cheaper. SVC took 0.03\u20130.05s per CV fit+predict on 64 features. The Nystroem and RFF pipelines took 0.08\u20131.3s on 100\u20131500 features.\n\nResults by family:\n- **Nystroem:** gamma 0.1\u20130.2 with 300\u2013600 components was the best non-SVC group (0.971\u20130.972). Going from 300 to 600 components gave no gain. 100 components fell to 0.960\u20130.965, and gamma=0.05 stalled at 0.964.\n- **RFF:** needed 1500 components to reach 0.969 at gamma=0.1.\n- **Poly2:** 2145 features, 0.9624, essentially no better than plain linear.\n\nThe CV standard deviations are about 0.02, so differences of 0.005 or less between top configurations are within noise.",
+        "analyst_lessons": [
+          "Linear+Nystroem(rbf) lifts the linear family from ~0.961 to 0.972 CV / 0.9796 val, but still trails the SVC(RBF) by ~0.006 CV. Expect kernel approximations to land below the exact kernel SVM, not match it.",
+          "Nystroem saturates at about 300 components (gamma 0.1\u20130.2); 600 components give no gain, and 100 components drop it by ~0.007\u20130.011.",
+          "RFF needs ~5x as many features as Nystroem (1500 vs 300) for a similar or lower score (0.969). Prefer Nystroem.",
+          "Degree-2 polynomial features plus LogisticRegression (2145 features) give no real gain over plain linear (0.9624 vs 0.9592). Drop this direction.",
+          "On this small dataset the exact SVC is the fastest model (~0.04s vs 0.2\u20131.3s), so approximate kernels offer no speed benefit. Spend effort on the SVC or ensembles to beat the 0.9889 best.",
+          "CV std is about 0.02 across configs, so a CV gap of 0.005 or less between top configurations is noise. Use repeated CV or the validation set to separate close candidates.",
+          "SVC gamma 0.05\u20130.2 at C=10 spans only 0.975\u20130.978 CV. Further gains likely need C tuning, preprocessing such as deskewing or augmentation, or ensembling rather than gamma alone."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 7,
+      "created_at": 1791970610.839487,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:decision:e6",
+      "type": "DECISION",
+      "title": "Deprioritize: Shift-augmented and deskewed 1-NN vs gamma-tuned RBF-SVM",
+      "summary": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+      "status": "deprioritize",
+      "confidence": null,
+      "epistemic": "benchmark",
+      "details": {
+        "before": "Predicted val accuracy 0.9917. Best before this result: #2 0.9889.",
+        "alternatives": [
+          {
+            "hypothesis": "r1:hyp:6",
+            "title": "Linear models on cheap nonlinear feature maps (Nystroem/RFF/poly2) vs SVM"
+          }
+        ],
+        "new_evidence": [
+          "r1:evidence:e6"
+        ],
+        "affected": [
+          "r1:hyp:5"
+        ],
+        "why": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+        "why_next": [],
+        "uncertain": [
+          "The gap to #2 is within noise (paired McNemar p=1); it may be as good."
+        ],
+        "provenance": "derived from the evaluator's numeric outcome; next-step reasons are quoted from the researcher's recorded rationale"
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791970611.2199097,
+      "origin": "derived"
+    },
+    {
+      "id": "r1:evidence:e6",
+      "type": "EVIDENCE",
+      "title": "val accuracy 0.9870 (+0.0278 vs baseline)",
+      "summary": "Held-out test 0.9833 (never shown to agents).",
+      "status": "supports",
+      "confidence": "strong",
+      "epistemic": "empirical",
+      "details": {
+        "val": 0.987012987012987,
+        "test": 0.9833333333333333,
+        "baseline_val": 0.9591836734693877,
+        "improvement": 0.0278293135435993,
+        "threshold": 0.005,
+        "vs_baseline": {
+          "test": "paired McNemar (exact)",
+          "p": 0.0026,
+          "only_new_right": 19,
+          "only_ref_right": 4
+        },
+        "n_val": 539,
+        "analyst_verdict": "refuted",
+        "analyst_analysis": "The hypothesis was that \u00b11-pixel shift augmentation and/or deskewing would let 1-NN improve on #3's best of 0.9889 and beat a gamma-tuned RBF-SVM. It predicted 0.9917. The measured validation score was 0.9870, which beats the 0.9592 baseline by 0.0278 but is lower than the previous best of 0.9889. On a validation set of 539 images, that is 532 correct versus 533, a difference of one image.\n\n**Cross-validation.** The chosen config, kNN k=1 with augmentation, scored 0.9805. That is only 0.0014 above raw k=1 (0.9791 \u00b1 0.0116), well inside one fold standard deviation of about 0.004 to 0.012, so the augmentation gain is noise. Deskewing did not help:\n- k=1: 0.9777 deskewed vs 0.9791 raw.\n- k=3: 0.9596 deskewed vs 0.9721 raw, a drop of 0.0125.\n- k=3 with deskew plus augmentation: 0.9610, also below raw.\n\n**Tuned SVM.** Tuning gamma did raise the SVM. Its best config (deskewed, g=0.2, C=10) reached 0.9805 CV, up from the 0.9763 CV recorded in #3, and exactly tied the best kNN. The tie rule then picked kNN. So the claim that the transforms would make 1-NN better than a tuned SVM is not supported. The two are statistically indistinguishable at about 0.979 to 0.981 CV.\n\n**SVM settings.** Small gamma with C=1 underfits badly; g=0.02, C=1 scored 0.9164 to 0.9457. With deskewing, the SVM's fold standard deviation was larger (about 0.018) than on raw pixels.\n\n**Runtime.** Every config fit and predicted in under 0.02 s per fold, so \"cheap\" does not separate the candidates.\n\n**Conclusion.** No feature transform tested here moved accuracy beyond noise. The ceiling for this family of models (raw-pixel 1-NN or RBF-SVM) on 718 images sits at about 0.98 CV and about 0.987 to 0.989 validation.",
+        "analyst_lessons": [
+          "Shift augmentation (\u00b11 px, 4 directions) gave 1-NN only +0.0014 CV (0.9791 to 0.9805), well within the fold std of about 0.01. Treat it as no effect on 8x8 digits.",
+          "Moment-based deskewing does not help on 8x8 images. It was neutral to slightly negative for k=1 (-0.0014) and hurt k=3 by 0.0125. Drop it from future pipelines.",
+          "Even with gamma tuned, the RBF-SVM best is 0.9805 CV (g=0.2, C=10), tied with the best 1-NN. Both model families plateau at about 0.98 CV, so stop spending experiments on head-to-head versions of these.",
+          "On SVC with X/16, gamma \u2264 0.05 at C=1 underfits (0.916 to 0.961). Any useful region needs gamma 0.1 to 0.2 with C=10.",
+          "With 539 validation images, one image is worth about 0.0019. The val gap from 0.9889 to 0.9870 is a single image, so require a CV gain larger than about 2\u00d7 the fold std (about 0.02) before claiming an improvement.",
+          "k=1 beats k=3 in every transform setting (by 0.004 to 0.018). The data are too sparse for neighbour voting to help.",
+          "Next ideas need to change the model class or ensemble, for example an SVM+kNN vote, HOG or gradient features, or a small CNN, rather than adding more pixel-level transforms to kNN or SVM."
+        ],
+        "note": "Outcome is decided by the numeric threshold; analyst text is commentary."
+      },
+      "source_table": "experiments",
+      "source_id": 6,
+      "created_at": 1791970611.2199097,
+      "origin": "derived"
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1:question:0|assumes|r1:assumption:sandbox",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:sandbox",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791969853.3800206,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:sandbox"
+    },
+    {
+      "id": "r1:question:0|assumes|r1:assumption:threshold",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791969853.3800206,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:threshold"
+    },
+    {
+      "id": "r1:question:0|assumes|r1:assumption:val_proxy",
+      "src": "r1:question:0",
+      "rel": "assumes",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Accepted when the run was configured.",
+      "evidence": [],
+      "created_at": 1791969853.3800206,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:assumption:val_proxy"
+    },
+    {
+      "id": "r1:exp:1|depends_on|r1:method:baseline",
+      "src": "r1:exp:1",
+      "rel": "depends_on",
+      "dst": "r1:method:baseline",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791969853.384799,
+      "origin": "derived",
+      "flow_src": "r1:method:baseline",
+      "flow_dst": "r1:exp:1"
+    },
+    {
+      "id": "r1:question:0|motivates|r1:method:baseline",
+      "src": "r1:question:0",
+      "rel": "motivates",
+      "dst": "r1:method:baseline",
+      "explanation": "Every candidate is compared with this fixed reference.",
+      "evidence": [],
+      "created_at": 1791969853.384799,
+      "origin": "derived",
+      "flow_src": "r1:question:0",
+      "flow_dst": "r1:method:baseline"
+    },
+    {
+      "id": "r1:exp:1|produces|r1:evidence:e1",
+      "src": "r1:exp:1",
+      "rel": "produces",
+      "dst": "r1:evidence:e1",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791969855.3285706,
+      "origin": "derived",
+      "flow_src": "r1:exp:1",
+      "flow_dst": "r1:evidence:e1"
+    },
+    {
+      "id": "r1:hyp:1|inspired_by|r1:evidence:e1",
+      "src": "r1:hyp:1",
+      "rel": "inspired_by",
+      "dst": "r1:evidence:e1",
+      "explanation": "The researcher cited experiment #1 as motivation.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791970416.3267324,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e1",
+      "flow_dst": "r1:hyp:1"
+    },
+    {
+      "id": "r1:hyp:1|proposes|r1:method:h1",
+      "src": "r1:hyp:1",
+      "rel": "proposes",
+      "dst": "r1:method:h1",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970416.3267324,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:method:h1"
+    },
+    {
+      "id": "r1:hyp:2|inspired_by|r1:evidence:e1",
+      "src": "r1:hyp:2",
+      "rel": "inspired_by",
+      "dst": "r1:evidence:e1",
+      "explanation": "The researcher cited experiment #1 as motivation.",
+      "evidence": [
+        "r1:evidence:e1"
+      ],
+      "created_at": 1791970416.3277159,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e1",
+      "flow_dst": "r1:hyp:2"
+    },
+    {
+      "id": "r1:hyp:2|proposes|r1:method:h2",
+      "src": "r1:hyp:2",
+      "rel": "proposes",
+      "dst": "r1:method:h2",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970416.3277159,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:method:h2"
+    },
+    {
+      "id": "r1:exp:2|depends_on|r1:method:h1",
+      "src": "r1:exp:2",
+      "rel": "depends_on",
+      "dst": "r1:method:h1",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970416.3296256,
+      "origin": "derived",
+      "flow_src": "r1:method:h1",
+      "flow_dst": "r1:exp:2"
+    },
+    {
+      "id": "r1:exp:2|tests|r1:hyp:1",
+      "src": "r1:exp:2",
+      "rel": "tests",
+      "dst": "r1:hyp:1",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970416.3296256,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:exp:2"
+    },
+    {
+      "id": "r1:exp:3|depends_on|r1:method:h2",
+      "src": "r1:exp:3",
+      "rel": "depends_on",
+      "dst": "r1:method:h2",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970416.3434284,
+      "origin": "derived",
+      "flow_src": "r1:method:h2",
+      "flow_dst": "r1:exp:3"
+    },
+    {
+      "id": "r1:exp:3|tests|r1:hyp:2",
+      "src": "r1:exp:3",
+      "rel": "tests",
+      "dst": "r1:hyp:2",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970416.3434284,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:exp:3"
+    },
+    {
+      "id": "r1:conclusion:e2|depends_on|r1:assumption:threshold",
+      "src": "r1:conclusion:e2",
+      "rel": "depends_on",
+      "dst": "r1:assumption:threshold",
+      "explanation": "Counts as a gain only via the threshold.",
+      "evidence": [],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:conclusion:e2"
+    },
+    {
+      "id": "r1:conclusion:e2|depends_on|r1:assumption:val_proxy",
+      "src": "r1:conclusion:e2",
+      "rel": "depends_on",
+      "dst": "r1:assumption:val_proxy",
+      "explanation": "Chosen on validation scores alone.",
+      "evidence": [],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:assumption:val_proxy",
+      "flow_dst": "r1:conclusion:e2"
+    },
+    {
+      "id": "r1:conclusion:e2|depends_on|r1:decision:e2",
+      "src": "r1:conclusion:e2",
+      "rel": "depends_on",
+      "dst": "r1:decision:e2",
+      "explanation": "Adopted by this decision.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:conclusion:e2"
+    },
+    {
+      "id": "r1:decision:e2|depends_on|r1:evidence:e2",
+      "src": "r1:decision:e2",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e2",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e2",
+      "flow_dst": "r1:decision:e2"
+    },
+    {
+      "id": "r1:decision:e2|selects|r1:hyp:1",
+      "src": "r1:decision:e2",
+      "rel": "selects",
+      "dst": "r1:hyp:1",
+      "explanation": "Best validation accuracy so far; it becomes the current best method.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:decision:e2"
+    },
+    {
+      "id": "r1:evidence:e2|motivates|r1:open:top2_2_3",
+      "src": "r1:evidence:e2",
+      "rel": "motivates",
+      "dst": "r1:open:top2_2_3",
+      "explanation": "Close score; the ranking is uncertain.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e2",
+      "flow_dst": "r1:open:top2_2_3"
+    },
+    {
+      "id": "r1:evidence:e2|supports|r1:conclusion:e2",
+      "src": "r1:evidence:e2",
+      "rel": "supports",
+      "dst": "r1:conclusion:e2",
+      "explanation": "Measured result behind this conclusion.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e2",
+      "flow_dst": "r1:conclusion:e2"
+    },
+    {
+      "id": "r1:evidence:e2|supports|r1:hyp:1",
+      "src": "r1:evidence:e2",
+      "rel": "supports",
+      "dst": "r1:hyp:1",
+      "explanation": "Improvement +0.0297 meets the 0.005 threshold on one validation split (paired McNemar p=3.05e-05: strong evidence).",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:evidence:e2"
+    },
+    {
+      "id": "r1:exp:2|produces|r1:evidence:e2",
+      "src": "r1:exp:2",
+      "rel": "produces",
+      "dst": "r1:evidence:e2",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970467.3170838,
+      "origin": "derived",
+      "flow_src": "r1:exp:2",
+      "flow_dst": "r1:evidence:e2"
+    },
+    {
+      "id": "r1:decision:e3|depends_on|r1:evidence:e3",
+      "src": "r1:decision:e3",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e3",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791970468.0953112,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:decision:e3"
+    },
+    {
+      "id": "r1:decision:e3|deprioritizes|r1:hyp:2",
+      "src": "r1:decision:e3",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:2",
+      "explanation": "Beat the baseline but ties the current best #2 (0.9889); the earlier result stays current. A benchmark ranking, not a refutation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791970468.0953112,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:decision:e3"
+    },
+    {
+      "id": "r1:evidence:e3|motivates|r1:open:top2_2_3",
+      "src": "r1:evidence:e3",
+      "rel": "motivates",
+      "dst": "r1:open:top2_2_3",
+      "explanation": "Close score; the ranking is uncertain.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791970468.0953112,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e3",
+      "flow_dst": "r1:open:top2_2_3"
+    },
+    {
+      "id": "r1:evidence:e3|supports|r1:hyp:2",
+      "src": "r1:evidence:e3",
+      "rel": "supports",
+      "dst": "r1:hyp:2",
+      "explanation": "Improvement +0.0297 meets the 0.005 threshold on one validation split (paired McNemar p=0.000402: strong evidence).",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791970468.0953112,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:evidence:e3"
+    },
+    {
+      "id": "r1:exp:3|produces|r1:evidence:e3",
+      "src": "r1:exp:3",
+      "rel": "produces",
+      "dst": "r1:evidence:e3",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970468.0953112,
+      "origin": "derived",
+      "flow_src": "r1:exp:3",
+      "flow_dst": "r1:evidence:e3"
+    },
+    {
+      "id": "r1:hyp:3|inspired_by|r1:decision:e2",
+      "src": "r1:hyp:3",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e2",
+      "explanation": "The researcher cited experiment #2 as motivation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970485.7163868,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:hyp:3"
+    },
+    {
+      "id": "r1:hyp:3|proposes|r1:method:h3",
+      "src": "r1:hyp:3",
+      "rel": "proposes",
+      "dst": "r1:method:h3",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970485.7163868,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:method:h3"
+    },
+    {
+      "id": "r1:hyp:3|refines|r1:hyp:1",
+      "src": "r1:hyp:3",
+      "rel": "refines",
+      "dst": "r1:hyp:1",
+      "explanation": "Builds on the hypothesis tested in experiment #2.",
+      "evidence": [],
+      "created_at": 1791970485.7163868,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:hyp:3"
+    },
+    {
+      "id": "r1:hyp:4|inspired_by|r1:decision:e2",
+      "src": "r1:hyp:4",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e2",
+      "explanation": "The researcher cited experiment #2 as motivation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970485.7174335,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:hyp:4"
+    },
+    {
+      "id": "r1:hyp:4|proposes|r1:method:h4",
+      "src": "r1:hyp:4",
+      "rel": "proposes",
+      "dst": "r1:method:h4",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970485.7174335,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:method:h4"
+    },
+    {
+      "id": "r1:hyp:4|refines|r1:hyp:1",
+      "src": "r1:hyp:4",
+      "rel": "refines",
+      "dst": "r1:hyp:1",
+      "explanation": "Builds on the hypothesis tested in experiment #2.",
+      "evidence": [],
+      "created_at": 1791970485.7174335,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:hyp:4"
+    },
+    {
+      "id": "r1:exp:4|depends_on|r1:method:h3",
+      "src": "r1:exp:4",
+      "rel": "depends_on",
+      "dst": "r1:method:h3",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970485.7198858,
+      "origin": "derived",
+      "flow_src": "r1:method:h3",
+      "flow_dst": "r1:exp:4"
+    },
+    {
+      "id": "r1:exp:4|tests|r1:hyp:3",
+      "src": "r1:exp:4",
+      "rel": "tests",
+      "dst": "r1:hyp:3",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970485.7198858,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:exp:4"
+    },
+    {
+      "id": "r1:exp:5|depends_on|r1:method:h4",
+      "src": "r1:exp:5",
+      "rel": "depends_on",
+      "dst": "r1:method:h4",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970485.7357976,
+      "origin": "derived",
+      "flow_src": "r1:method:h4",
+      "flow_dst": "r1:exp:5"
+    },
+    {
+      "id": "r1:exp:5|tests|r1:hyp:4",
+      "src": "r1:exp:5",
+      "rel": "tests",
+      "dst": "r1:hyp:4",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970485.7357976,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:exp:5"
+    },
+    {
+      "id": "r1:decision:e4|depends_on|r1:evidence:e4",
+      "src": "r1:decision:e4",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e4",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791970530.8199685,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e4",
+      "flow_dst": "r1:decision:e4"
+    },
+    {
+      "id": "r1:decision:e4|deprioritizes|r1:hyp:3",
+      "src": "r1:decision:e4",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:3",
+      "explanation": "No detectable gain (improvement +0.0037 < 0.005). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791970530.8199685,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:decision:e4"
+    },
+    {
+      "id": "r1:evidence:e4|contradicts|r1:hyp:3",
+      "src": "r1:evidence:e4",
+      "rel": "contradicts",
+      "dst": "r1:hyp:3",
+      "explanation": "Improvement +0.0037 misses the 0.005 threshold on one validation split (paired McNemar p=0.754: weak evidence).",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791970530.8199685,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:evidence:e4"
+    },
+    {
+      "id": "r1:exp:4|produces|r1:evidence:e4",
+      "src": "r1:exp:4",
+      "rel": "produces",
+      "dst": "r1:evidence:e4",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970530.8199685,
+      "origin": "derived",
+      "flow_src": "r1:exp:4",
+      "flow_dst": "r1:evidence:e4"
+    },
+    {
+      "id": "r1:decision:e5|depends_on|r1:evidence:e5",
+      "src": "r1:decision:e5",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e5",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791970531.400143,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e5",
+      "flow_dst": "r1:decision:e5"
+    },
+    {
+      "id": "r1:decision:e5|deprioritizes|r1:hyp:4",
+      "src": "r1:decision:e5",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:4",
+      "explanation": "Lower than the baseline (-0.0167), but not significantly (paired McNemar p=0.136). Inconclusive rather than refuted; set aside in favour of stronger leads.",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791970531.400143,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:decision:e5"
+    },
+    {
+      "id": "r1:evidence:e5|contradicts|r1:hyp:4",
+      "src": "r1:evidence:e5",
+      "rel": "contradicts",
+      "dst": "r1:hyp:4",
+      "explanation": "Improvement -0.0167 misses the 0.005 threshold on one validation split (paired McNemar p=0.136: weak evidence).",
+      "evidence": [
+        "r1:evidence:e5"
+      ],
+      "created_at": 1791970531.400143,
+      "origin": "derived",
+      "flow_src": "r1:hyp:4",
+      "flow_dst": "r1:evidence:e5"
+    },
+    {
+      "id": "r1:exp:5|produces|r1:evidence:e5",
+      "src": "r1:exp:5",
+      "rel": "produces",
+      "dst": "r1:evidence:e5",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970531.400143,
+      "origin": "derived",
+      "flow_src": "r1:exp:5",
+      "flow_dst": "r1:evidence:e5"
+    },
+    {
+      "id": "r1:hyp:5|inspired_by|r1:decision:e2",
+      "src": "r1:hyp:5",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e2",
+      "explanation": "The researcher cited experiment #2 as motivation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970549.9941416,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|inspired_by|r1:decision:e3",
+      "src": "r1:hyp:5",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e3",
+      "explanation": "The researcher cited experiment #3 as motivation.",
+      "evidence": [
+        "r1:evidence:e3"
+      ],
+      "created_at": 1791970549.9941416,
+      "origin": "derived",
+      "flow_src": "r1:decision:e3",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|proposes|r1:method:h5",
+      "src": "r1:hyp:5",
+      "rel": "proposes",
+      "dst": "r1:method:h5",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970549.9941416,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:method:h5"
+    },
+    {
+      "id": "r1:hyp:5|refines|r1:hyp:1",
+      "src": "r1:hyp:5",
+      "rel": "refines",
+      "dst": "r1:hyp:1",
+      "explanation": "Builds on the hypothesis tested in experiment #2.",
+      "evidence": [],
+      "created_at": 1791970549.9941416,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:5|refines|r1:hyp:2",
+      "src": "r1:hyp:5",
+      "rel": "refines",
+      "dst": "r1:hyp:2",
+      "explanation": "Builds on the hypothesis tested in experiment #3.",
+      "evidence": [],
+      "created_at": 1791970549.9941416,
+      "origin": "derived",
+      "flow_src": "r1:hyp:2",
+      "flow_dst": "r1:hyp:5"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:decision:e2",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e2",
+      "explanation": "The researcher cited experiment #2 as motivation.",
+      "evidence": [
+        "r1:evidence:e2"
+      ],
+      "created_at": 1791970549.995309,
+      "origin": "derived",
+      "flow_src": "r1:decision:e2",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|inspired_by|r1:decision:e4",
+      "src": "r1:hyp:6",
+      "rel": "inspired_by",
+      "dst": "r1:decision:e4",
+      "explanation": "The researcher cited experiment #4 as motivation.",
+      "evidence": [
+        "r1:evidence:e4"
+      ],
+      "created_at": 1791970549.995309,
+      "origin": "derived",
+      "flow_src": "r1:decision:e4",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|proposes|r1:method:h6",
+      "src": "r1:hyp:6",
+      "rel": "proposes",
+      "dst": "r1:method:h6",
+      "explanation": "Method the researcher proposed to test this hypothesis.",
+      "evidence": [],
+      "created_at": 1791970549.995309,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:method:h6"
+    },
+    {
+      "id": "r1:hyp:6|refines|r1:hyp:1",
+      "src": "r1:hyp:6",
+      "rel": "refines",
+      "dst": "r1:hyp:1",
+      "explanation": "Builds on the hypothesis tested in experiment #2.",
+      "evidence": [],
+      "created_at": 1791970549.995309,
+      "origin": "derived",
+      "flow_src": "r1:hyp:1",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:hyp:6|refines|r1:hyp:3",
+      "src": "r1:hyp:6",
+      "rel": "refines",
+      "dst": "r1:hyp:3",
+      "explanation": "Builds on the hypothesis tested in experiment #4.",
+      "evidence": [],
+      "created_at": 1791970549.995309,
+      "origin": "derived",
+      "flow_src": "r1:hyp:3",
+      "flow_dst": "r1:hyp:6"
+    },
+    {
+      "id": "r1:exp:6|depends_on|r1:method:h5",
+      "src": "r1:exp:6",
+      "rel": "depends_on",
+      "dst": "r1:method:h5",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970550.0005538,
+      "origin": "derived",
+      "flow_src": "r1:method:h5",
+      "flow_dst": "r1:exp:6"
+    },
+    {
+      "id": "r1:exp:6|tests|r1:hyp:5",
+      "src": "r1:exp:6",
+      "rel": "tests",
+      "dst": "r1:hyp:5",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970550.0005538,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:exp:6"
+    },
+    {
+      "id": "r1:exp:7|depends_on|r1:method:h6",
+      "src": "r1:exp:7",
+      "rel": "depends_on",
+      "dst": "r1:method:h6",
+      "explanation": "Implements this method.",
+      "evidence": [],
+      "created_at": 1791970550.0148563,
+      "origin": "derived",
+      "flow_src": "r1:method:h6",
+      "flow_dst": "r1:exp:7"
+    },
+    {
+      "id": "r1:exp:7|tests|r1:hyp:6",
+      "src": "r1:exp:7",
+      "rel": "tests",
+      "dst": "r1:hyp:6",
+      "explanation": "Runs the hypothesis's method in the sandbox.",
+      "evidence": [],
+      "created_at": 1791970550.0148563,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:exp:7"
+    },
+    {
+      "id": "r1:decision:e7|depends_on|r1:evidence:e7",
+      "src": "r1:decision:e7",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e7",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791970610.839487,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e7",
+      "flow_dst": "r1:decision:e7"
+    },
+    {
+      "id": "r1:decision:e7|deprioritizes|r1:hyp:6",
+      "src": "r1:decision:e7",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:6",
+      "explanation": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791970610.839487,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:decision:e7"
+    },
+    {
+      "id": "r1:evidence:e7|supports|r1:hyp:6",
+      "src": "r1:evidence:e7",
+      "rel": "supports",
+      "dst": "r1:hyp:6",
+      "explanation": "Improvement +0.0204 meets the 0.005 threshold on one validation split (paired McNemar p=0.00739: moderate evidence).",
+      "evidence": [
+        "r1:evidence:e7"
+      ],
+      "created_at": 1791970610.839487,
+      "origin": "derived",
+      "flow_src": "r1:hyp:6",
+      "flow_dst": "r1:evidence:e7"
+    },
+    {
+      "id": "r1:exp:7|produces|r1:evidence:e7",
+      "src": "r1:exp:7",
+      "rel": "produces",
+      "dst": "r1:evidence:e7",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970610.839487,
+      "origin": "derived",
+      "flow_src": "r1:exp:7",
+      "flow_dst": "r1:evidence:e7"
+    },
+    {
+      "id": "r1:decision:e6|depends_on|r1:evidence:e6",
+      "src": "r1:decision:e6",
+      "rel": "depends_on",
+      "dst": "r1:evidence:e6",
+      "explanation": "The evidence this decision was made on.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791970611.2199097,
+      "origin": "derived",
+      "flow_src": "r1:evidence:e6",
+      "flow_dst": "r1:decision:e6"
+    },
+    {
+      "id": "r1:decision:e6|deprioritizes|r1:hyp:5",
+      "src": "r1:decision:e6",
+      "rel": "deprioritizes",
+      "dst": "r1:hyp:5",
+      "explanation": "Beat the baseline but trails the current best #2 (0.9889). A benchmark ranking, not a refutation.",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791970611.2199097,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:decision:e6"
+    },
+    {
+      "id": "r1:evidence:e6|supports|r1:hyp:5",
+      "src": "r1:evidence:e6",
+      "rel": "supports",
+      "dst": "r1:hyp:5",
+      "explanation": "Improvement +0.0278 meets the 0.005 threshold on one validation split (paired McNemar p=0.0026: strong evidence).",
+      "evidence": [
+        "r1:evidence:e6"
+      ],
+      "created_at": 1791970611.2199097,
+      "origin": "derived",
+      "flow_src": "r1:hyp:5",
+      "flow_dst": "r1:evidence:e6"
+    },
+    {
+      "id": "r1:exp:6|produces|r1:evidence:e6",
+      "src": "r1:exp:6",
+      "rel": "produces",
+      "dst": "r1:evidence:e6",
+      "explanation": "Scored by the trusted evaluator.",
+      "evidence": [],
+      "created_at": 1791970611.2199097,
+      "origin": "derived",
+      "flow_src": "r1:exp:6",
+      "flow_dst": "r1:evidence:e6"
+    },
+    {
+      "id": "r1:assumption:threshold|motivates|r1:open:threshold",
+      "src": "r1:assumption:threshold",
+      "rel": "motivates",
+      "dst": "r1:open:threshold",
+      "explanation": "Assumption questioned by the noise check.",
+      "evidence": [],
+      "created_at": 1791970677.4365842,
+      "origin": "derived",
+      "flow_src": "r1:assumption:threshold",
+      "flow_dst": "r1:open:threshold"
+    }
+  ]
+}
