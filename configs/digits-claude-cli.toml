@@ -1,0 +1,45 @@
+# Real run through headless Claude Code (`claude -p`), using your Claude subscription login.
+# No API key needed: just be logged in to Claude Code. Any ANTHROPIC_API_KEY in the environment
+# is removed for these calls, so they always go to the subscription.
+#
+# budget_usd counts the CLI's *API-equivalent* cost estimate (total_cost_usd), not money you are
+# charged. It still works as a hard cap on how much usage one run can take. Subscription usage
+# limits apply; if you hit one, the run stops and the same command resumes it later.
+[run]
+name = "digits-claude-cli"
+domain = "digits"
+# objective = "..."            # optional; overrides the domain's default objective
+max_experiments = 8
+budget_usd = 5.00
+workers = 2
+hypotheses_per_round = 2
+max_fix_attempts = 2
+llm_validation_retries = 2
+llm_analysis = true
+
+[llm]
+provider = "claude-cli"
+model = "claude-opus-5-5"
+effort = "medium"
+max_tokens = 16000              # only used to size each call's worst-case budget reservation
+cli_timeout_s = 600
+
+# Optional per-role overrides, e.g. a cheaper analyst:
+# [llm.roles.analyst]
+# provider = "claude-cli"
+# model = "claude-haiku-5-5"
+
+[sandbox]
+image = "autoresearch-sandbox:1"
+timeout_s = 120
+memory = "1g"
+cpus = 1.0
+pids = 128
+network = "none"
+
+# USD per 1M tokens [input, output]; used for the worst-case reservation before each call.
+[pricing]
+"claude-opus-5-5" = [4.0, 20.0]
+"claude-sonnet-5-5" = [2.0, 10.0]
+"claude-haiku-5-5" = [0.10, 0.50]
+"claude-fable-5-1" = [10.0, 50.0]

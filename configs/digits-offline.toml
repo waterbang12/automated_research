@@ -1,0 +1,18 @@
+# Credential-free run: real Docker execution and scoring, with the domain's deterministic
+# offline fixture standing in for all three LLM roles. Costs $0.
+[run]
+name = "digits-offline"
+domain = "digits"
+max_experiments = 8
+budget_usd = 0.0
+workers = 2
+hypotheses_per_round = 2
+max_fix_attempts = 1
+llm_analysis = true
+
+[llm]
+provider = "offline"
+model = "offline"
+
+[sandbox]
+timeout_s = 120

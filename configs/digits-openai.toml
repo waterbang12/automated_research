@@ -1,0 +1,39 @@
+# Real run with OpenAI. Requires OPENAI_API_KEY in the environment.
+[run]
+name = "digits-openai"
+domain = "digits"
+# objective = "..."            # optional; overrides the domain's default objective
+max_experiments = 8
+budget_usd = 2.00               # hard cap on API spend for this run (raising it later needs --approve)
+workers = 2
+hypotheses_per_round = 2
+max_fix_attempts = 2
+llm_validation_retries = 2
+llm_analysis = true
+
+[llm]
+provider = "openai"
+model = "gpt-5"
+max_tokens = 16000
+
+# Optional per-role overrides, e.g. a cheaper analyst:
+# [llm.roles.analyst]
+# provider = "openai"
+# model = "claude-haiku-5-5"
+
+[sandbox]
+image = "autoresearch-sandbox:1"
+timeout_s = 120
+memory = "1g"
+cpus = 1.0
+pids = 128
+network = "none"
+
+# USD per 1M tokens [input, output]. Verify against current price lists.
+[pricing]
+"claude-opus-5-5" = [4.0, 20.0]
+"claude-sonnet-5-5" = [2.0, 10.0]
+"claude-haiku-5-5" = [0.10, 0.50]
+"claude-fable-5-1" = [10.0, 50.0]
+# Set this to the real current price of the OpenAI model you use before running.
+"gpt-5" = [1.25, 10.0]

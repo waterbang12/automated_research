@@ -1,0 +1,29 @@
+name = "digits"
+objective = "Maximise classification accuracy on 8x8 handwritten digit images (10 classes) using only the provided training split."
+metric = "accuracy"
+higher_is_better = true
+# A hypothesis "succeeds" when it beats the baseline's validation accuracy by at least this much.
+min_improvement = 0.005
+
+contract = """
+You write ONE self-contained Python 3.12 program. It runs as `python /code/experiment.py`
+inside a sandbox with NO network, a read-only filesystem except /out and /tmp, 1 CPU,
+1 GB RAM and a hard wall-clock limit (see below). Installed libraries: numpy 2.1,
+scipy 1.14, scikit-learn 1.5, pandas 2.2 and the standard library. Nothing else.
+
+Inputs (read-only, CSV with a header row):
+  /data/train.csv  columns f0..f63 (pixel intensities 0-16) and `label` (int 0-9)
+  /data/val_X.csv  columns f0..f63, no labels
+  /data/test_X.csv columns f0..f63, no labels
+
+Required outputs:
+  /out/val_pred.csv   one integer label per line, no header, same row order as val_X.csv
+  /out/test_pred.csv  one integer label per line, no header, same row order as test_X.csv
+
+Rules:
+  - Seed all randomness from the integer environment variable SEED.
+  - Train only on /data/train.csv (you may split it further for model selection).
+  - Do not try to read or infer validation/test labels; they are not available.
+  - Print short progress lines to stdout; keep total runtime well under the limit.
+  - Exit with status 0 on success.
+"""
