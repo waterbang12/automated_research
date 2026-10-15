@@ -1,0 +1,140 @@
+# Milestones and next actions.
+#
+# status: done | in_progress | next | planned | blocked
+# A milestone is done only when every acceptance criterion has evidence (see capabilities.yaml
+# for the evidence prefixes). Plans here are proposals; the owner can reorder them.
+
+as_of: "2026-10-15"
+
+milestones:
+  - id: M0
+    title: Core research loop with sandbox, trusted scoring, budget, resume, Claude CLI provider
+    status: done
+    depends_on: []
+    acceptance_criteria:
+      - Full loop runs unattended and resumes after a kill
+      - Integrity tampering is detected
+      - A real Claude CLI run completes
+    evidence:
+      - commit:929fc96
+      - test:tests/test_controller.py::test_full_loop_records_everything_and_feeds_back
+      - run:smoke-claude-cli
+
+  - id: M1
+    title: Research Reasoning Graph phase 1 - data model, derivation from records, interactive viewer
+    status: done
+    depends_on: [M0]
+    acceptance_criteria:
+      - The graph is derived from existing records with persistent ids and no deletions
+      - The viewer shows why a method was chosen, why an alternative was rejected, the supporting evidence, the unverified assumptions, and the next experiment
+    evidence:
+      - commit:da9b01c
+      - test:tests/test_graph.py::test_lineage_queries
+      - doc:docs/research-graph.md
+
+  - id: M2
+    title: Agent step log, read-only Run page, run checks
+    status: done
+    depends_on: [M0]
+    acceptance_criteria:
+      - Every step is recorded live with links to its prompt, code and execution
+      - Older runs get a reconstructed trace
+      - The checks panel detects tampering and pending permissions
+    evidence:
+      - commit:db4eecc
+      - test:tests/test_steps.py::test_trace_is_recorded_live_and_complete
+      - test:tests/test_steps.py::test_checks
+
+  - id: M3
+    title: Graph phase 2 (live decision records, replay) and problem formulation tools
+    status: done
+    depends_on: [M1, M2]
+    acceptance_criteria:
+      - The researcher records a decision each round, and it appears in the graph and the Run page
+      - new-domain and check-domain work end to end in Docker
+      - A real run on a known-answer problem is measured against its known optimum
+    evidence:
+      - commit:9d8ffd6
+      - test:tests/test_graph.py::test_round_decisions_are_recorded_by_the_researcher
+      - test:tests/test_scaffold.py::test_check_domain_end_to_end_in_docker
+      - run:planted
+
+  - id: M4
+    title: Project metadata (AGENTS.md + project/) and Codex CLI provider
+    status: done
+    depends_on: [M0]
+    acceptance_criteria:
+      - AGENTS.md and project/ answer the six continuity questions; evidence references are machine-checked
+      - The codex-cli provider passes tests for structured output, re-ask, failure, timeout, cancellation, budget and Windows shim resolution
+      - All earlier tests still pass
+    evidence:
+      - test:tests/test_project_metadata.py::test_evidence_references_exist
+      - test:tests/test_codex_cli.py::test_structured_call_args_usage_and_cost
+      - test:tests/test_codex_cli.py::test_timeout_and_cancellation_kill_the_cli
+    notes: A signed-in Codex run is tracked separately as next action N1.
+
+  - id: M5
+    title: Typed-claim evaluator (from optimizer to hypothesis tester)
+    status: next
+    depends_on: [M3]
+    acceptance_criteria:
+      - The HYPOTHESES schema has a structured claim (type in improvement | equivalence | ablation | direction | null, plus target, margin delta) that replaces free-text falsified_if as the evaluated criterion
+      - The trusted evaluator tests each claim type with paired tests on held-out validation data, and the result is stored per experiment
+      - Ablation and null claims run the required variant programs inside the sandbox, without the agent seeing labels
+      - The graph shows claim verdicts (supported / contradicted / inconclusive) with strength; tests cover every claim type on the fake executor
+      - "A real planted run verifies at least one structural claim (for example: removing x2*x3 worsens RMSE by >= delta)"
+    evidence: []
+
+  - id: M6
+    title: Noise checks (repeated CV / multi-seed experiments)
+    status: planned
+    depends_on: [M5]
+    acceptance_criteria:
+      - A "which is better, A or B?" open question can be closed by a recorded repeated-CV comparison inside the sandbox time limit
+      - Evidence strength uses the repeated estimates when they exist
+    evidence: []
+
+  - id: M7
+    title: Literature-based method selection (method cards with verified provenance)
+    status: planned
+    depends_on: [M5]
+    acceptance_criteria:
+      - Method cards store title, authors, year, DOI/arXiv and quoted supporting passages from permitted sources only
+      - No card is created without a fetched primary source; cards appear as EVIDENCE with a source in the graph
+      - Pilot experiments are proposed before expensive methods
+    evidence: []
+    notes: Needs a decision on where retrieval runs (host vs sandbox) and which sources are permitted (questions.md Q6).
+
+  - id: M8
+    title: Graph-aware memory retrieval and experiment prioritisation
+    status: planned
+    depends_on: [M6, M7]
+    acceptance_criteria:
+      - Retrieval ranks past results separately by relevance, evidence strength, information value and recency
+      - Negative results are not down-weighted by default
+      - A retrieval benchmark exists before any vector store is considered (decisions.md D13)
+    evidence: []
+
+next_actions:
+  - id: N1
+    title: Signed-in Codex CLI smoke run
+    owner: user (needs `npm i -g @openai/codex` and `codex login`)
+    acceptance_criteria:
+      - "`python -m research run configs/digits-codex-cli.toml --max-experiments 2` completes"
+      - llm_calls rows have provider codex-cli and nonzero input/output tokens
+      - The Run page checks show no failures
+      - capabilities.yaml provider.codex_cli is upgraded to verified, with run evidence; questions.md Q1 is answered
+  - id: N2
+    title: Build M5 (typed-claim evaluator)
+    owner: agent
+    acceptance_criteria: see milestone M5
+  - id: N3
+    title: Live API smoke runs for the anthropic and openai providers
+    owner: user (needs API keys)
+    acceptance_criteria:
+      - A 2-experiment run completes for each provider, or the incompatibility is recorded in questions.md Q2
+  - id: N4
+    title: Repeat the planted run (>= 2 more runs, and one other model) to measure variance
+    owner: agent + user (subscription usage)
+    acceptance_criteria:
+      - Gap closed, experiments needed and usage are reported per run in log.md

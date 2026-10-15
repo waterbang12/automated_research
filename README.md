@@ -50,6 +50,7 @@ The configs live in `configs/*.toml`:
 
 - `digits-claude.toml`: Claude (`claude-opus-5-5`, effort `medium`), $2 budget, 8 experiments, 2 workers.
 - `digits-demo.toml`, `digits-cheap-vs-heavy.toml`: the two real runs used for the Research Reasoning Graph examples.
+- `digits-codex-cli.toml`: OpenAI models through the Codex CLI (`codex exec`). See "Using the Codex CLI" below.
 - `digits-claude-cli.toml`: Claude through headless Claude Code (`claude -p`), using your Claude
   subscription login instead of an API key. See "Using a Claude subscription" below.
 - `digits-openai.toml`: OpenAI. **Set `model` and its `[pricing]` entry to the model you actually use.**
@@ -94,6 +95,39 @@ environment, so calls always use the subscription.
 - `max_tokens` cannot be passed to the CLI. It only sizes each call's worst-case budget reservation.
 - `cli_timeout_s` (default 600) limits each call.
 - For personal research only. Use the API (`provider = "anthropic"`) for anything you serve to others.
+
+## Using the Codex CLI (`provider = "codex-cli"`)
+
+OpenAI models can run through the Codex CLI instead of the API, using its own sign-in. From a
+VS Code terminal on Windows (PowerShell), in the repo folder:
+
+```powershell
+npm i -g @openai/codex                 # needs Node.js; installs codex.cmd into %APPDATA%\npm
+codex login                            # once: sign in (ChatGPT account or API key)
+codex --version                        # check it is on PATH
+# edit configs\digits-codex-cli.toml: set `model` to the model you use, and give it a [pricing] entry
+.venv\Scripts\python -m research run configs/digits-codex-cli.toml --max-experiments 2
+.venv\Scripts\python -m research graph serve       # watch it on the Run page
+```
+
+Each call runs `codex exec` without interaction, in a fresh empty temp folder:
+- `--sandbox read-only`, `--ephemeral`, `--skip-git-repo-check`
+- the JSON schema passed with `--output-schema`, the answer read from `--output-last-message`
+- token usage read from the `--json` event stream
+- the prompt sent on stdin; Codex has no system-prompt flag, so the system text is prepended
+
+The answer is validated against the same schemas as every other provider, and the model is asked
+again if it doesn't match.
+
+On Windows, npm's `codex.cmd` shim is run as `node …\@openai\codex\bin\codex.js`, which avoids
+`cmd.exe` argument re-parsing. If `codex` is not on PATH, set `codex_path` in `[llm]` to the
+`.cmd`, the `.exe` or `codex.js`.
+
+- **Budget:** the CLI reports tokens, not charges. `budget_usd` counts tokens × `[pricing]` (an API-equivalent *estimate*). What you actually pay depends on how Codex is signed in.
+- **API keys:** `OPENAI_API_KEY`/`CODEX_API_KEY` are removed from Codex's environment unless `codex_inherit_api_key = true`.
+- **Reasoning effort:** set `codex_reasoning_effort` to pass `-c model_reasoning_effort="…"`.
+- **Failures** (sign-in, usage limits, network, timeouts via `cli_timeout_s`) stop the run cleanly. Run the same command again to resume.
+- **Status:** tested against a fake CLI and against the real CLI (0.162.1) without signing in. A signed-in run has not been made yet (see `project/roadmap.yaml`, N1).
 
 ## Running
 
@@ -249,7 +283,7 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
 .venv/Scripts/python -m pytest -q
 ```
 
-49 tests in about 40 seconds:
+68 tests in about 50 seconds:
 
 - **Schema validation**
 - **Budget:** worst-case reservation, and concurrent reservations that cannot overspend
@@ -278,6 +312,17 @@ Lower `[llm] max_tokens` to use a small budget more fully. Real costs are in the
   - a provider outage recorded as interrupted rather than failed
   - steps left dangling by a killed session marked interrupted on resume
   - reconstruction for older databases, and the API
+- **Codex CLI adapter** (`tests/test_codex_cli.py`), against a fake `codex` with the real CLI's interface. It covers:
+  - the exact arguments and schema file
+  - API keys not inherited
+  - usage and cost from `turn.completed`
+  - the answer read from the event stream when there is no output file
+  - malformed output re-asked
+  - `turn.failed` and crashes stopping the run
+  - timeouts and cancellation killing the CLI
+  - the budget reserved before the CLI starts
+  - Windows `.cmd` shim resolution
+- **Project metadata** (`tests/test_project_metadata.py`): every evidence reference in `project/*.yaml` exists, statuses are used consistently, and the entry points are linked
 - **Claude CLI adapter:** a fake `claude` script checks the arguments, stdin/system-prompt
   passing, that the API key is stripped, and usage/cost parsing
 

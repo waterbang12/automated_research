@@ -164,7 +164,9 @@ def checks(m: Memory, run: dict, work_dir: Path | None, domain) -> list[dict]:
     spent = m.total_cost(rid)
     budget = cfg.get("budget_usd")
     provider = (cfg.get("llm") or {}).get("provider")
-    note = " (API-equivalent estimate; billed to the Claude subscription)" if provider == "claude-cli" else ""
+    note = {"claude-cli": " (API-equivalent estimate from the CLI; billed to the Claude subscription)",
+            "codex-cli": " (estimate: tokens x [pricing]; actual charges depend on how Codex is signed in)"
+            }.get(provider, "")
     if budget:
         frac = spent / budget
         add("budget", "Budget", "warn" if frac > 0.9 else "ok", f"${spent:.4f} of ${budget:.2f} ({frac:.0%}){note}")

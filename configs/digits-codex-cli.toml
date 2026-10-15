@@ -1,0 +1,51 @@
+# Real run through the OpenAI Codex CLI (`codex exec`), non-interactively.
+# Install and sign in once:  npm i -g @openai/codex   then   codex login
+# OPENAI_API_KEY / CODEX_API_KEY are removed from the CLI's environment unless
+# codex_inherit_api_key = true, so by default Codex uses its own sign-in.
+#
+# budget_usd counts tokens x [pricing] (an API-equivalent estimate), because the CLI reports
+# tokens, not charges. It still caps how much one run can use.
+[run]
+name = "digits-codex-cli"
+domain = "digits"
+# objective = "..."            # optional; overrides the domain's default objective
+max_experiments = 8
+budget_usd = 5.00
+workers = 2
+hypotheses_per_round = 2
+max_fix_attempts = 2
+llm_validation_retries = 2
+llm_analysis = true
+
+[llm]
+provider = "codex-cli"
+model = "gpt-5"                  # set to the Codex model you use, and give it a [pricing] entry
+# codex_reasoning_effort = "medium"   # optional: passed as -c model_reasoning_effort="..."
+# codex_path = ""               # optional: codex exe, npm codex.cmd shim, or codex.js (default: codex on PATH)
+# codex_inherit_api_key = false # true passes OPENAI_API_KEY through (Codex then bills the API)
+max_tokens = 16000              # only used to size each call's worst-case budget reservation
+cli_timeout_s = 600
+
+# Optional per-role overrides, e.g. a cheaper analyst:
+# [llm.roles.analyst]
+# provider = "codex-cli"
+# model = "gpt-5-mini"
+
+[sandbox]
+image = "autoresearch-sandbox:1"
+timeout_s = 120
+memory = "1g"
+cpus = 1.0
+pids = 128
+network = "none"
+
+# USD per 1M tokens [input, output]; used for the worst-case reservation before each call.
+[pricing]
+"claude-opus-5-5" = [4.0, 20.0]
+"claude-sonnet-5-5" = [2.0, 10.0]
+"claude-haiku-5-5" = [0.10, 0.50]
+"claude-fable-5-1" = [10.0, 50.0]
+# Codex models: [pricing] turns reported tokens into an API-equivalent estimate for the budget.
+# It is NOT what a ChatGPT plan bills. Verify these against current OpenAI prices.
+"gpt-5" = [1.25, 10.0]
+"gpt-5-mini" = [0.25, 2.0]

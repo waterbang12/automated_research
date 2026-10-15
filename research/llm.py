@@ -163,6 +163,113 @@ class ClaudeCLIAdapter:
         return res.get("result") or "", usage      # let schema validation report the problem
 
 
+def resolve_codex(configured: str = "") -> list[str] | None:
+    """Command prefix that launches the Codex CLI, or None if it cannot be found.
+
+    npm installs `codex` on Windows as a .cmd shim, which Python cannot start without cmd.exe
+    (and cmd.exe re-parses arguments). The shim only runs `node .../@openai/codex/bin/codex.js`,
+    so run that directly. `configured` may be an exe, a .cmd shim or the codex.js path.
+    """
+    path = configured or shutil.which("codex")
+    if not path:
+        return None
+    p = Path(path)
+    if p.suffix.lower() == ".js":
+        node = shutil.which("node")
+        return [node, str(p)] if node else None
+    if p.suffix.lower() in (".cmd", ".bat", ".ps1"):
+        # global install: %APPDATA%\npm\codex.cmd; local install: node_modules\.bin\codex.cmd
+        rel = Path("@openai") / "codex" / "bin" / "codex.js"
+        js = next((c for c in (p.parent / "node_modules" / rel, p.parent.parent / rel) if c.exists()), None)
+        node = (p.parent / "node.exe") if (p.parent / "node.exe").exists() else shutil.which("node")
+        return [str(node), str(js)] if js and node else None
+    return [str(p)]
+
+
+class CodexCLIAdapter:
+    """OpenAI Codex CLI run non-interactively (`codex exec`).
+
+    Each call runs in a fresh, empty temp directory with a read-only sandbox, no persisted
+    session (--ephemeral) and no git requirement. The JSON schema goes in a file
+    (--output-schema), the final message comes back through --output-last-message, and usage
+    is read from the --json event stream (`turn.completed`). The CLI reports tokens, not money:
+    the budget charges tokens x [pricing], an API-equivalent estimate that is not what a
+    ChatGPT plan bills. Codex has no system-prompt flag, so the system text is prepended.
+    """
+
+    PREAMBLE = ("You are being called as a component of an automated research loop. Do not run commands, "
+                "read or write files, or ask questions. Reply only with the final answer as JSON that matches "
+                "the provided output schema.")
+
+    def __init__(self, cfg: Config):
+        cmd = resolve_codex(cfg.llm.codex_path)
+        if not cmd:
+            raise RuntimeError("provider 'codex-cli' needs the Codex CLI (npm i -g @openai/codex), or set "
+                               "[llm] codex_path")
+        self.cmd, self.cfg = cmd, cfg.llm
+        drop = {"CODEX_MANAGED_BY_NPM"} | (set() if cfg.llm.codex_inherit_api_key else {"OPENAI_API_KEY", "CODEX_API_KEY"})
+        self.env = {k: v for k, v in os.environ.items() if k not in drop}
+
+    def args(self, model: str, schema_file: Path, out_file: Path, workdir: Path) -> list[str]:
+        a = [*self.cmd, "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only",
+             "--json", "--color", "never", "--output-schema", str(schema_file),
+             "--output-last-message", str(out_file), "--cd", str(workdir)]
+        if model and model != "default":
+            a += ["--model", model]
+        if self.cfg.codex_reasoning_effort:
+            a += ["-c", f'model_reasoning_effort="{self.cfg.codex_reasoning_effort}"']
+        return a + ["-"]                    # prompt from stdin: no command-line length limit
+
+    async def complete(self, *, role, model, system, prompt, schema, schema_name, context):
+        work = Path(tempfile.mkdtemp(prefix="research-codex-"))
+        schema_file, out_file = work / f"{schema_name}.schema.json", work / "last_message.txt"
+        schema_file.write_text(json.dumps(schema), encoding="utf-8")
+        text = f"{self.PREAMBLE}\n\n# Instructions\n{system}\n\n# Task\n{prompt}"
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *self.args(model, schema_file, out_file, work), stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=str(work), env=self.env)
+            try:
+                out, err = await asyncio.wait_for(proc.communicate(text.encode("utf-8")),
+                                                  timeout=self.cfg.cli_timeout_s)
+            except BaseException:          # timeout or cancellation: never leave the CLI running
+                proc.kill()
+                await proc.wait()
+                raise
+            last = out_file.read_text(encoding="utf-8", errors="replace") if out_file.exists() else None
+        except asyncio.TimeoutError:
+            raise ProviderUnavailable(f"codex exec timed out after {self.cfg.cli_timeout_s}s")
+        except OSError as e:
+            raise ProviderUnavailable(f"could not start codex: {e}")
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        events = []
+        for line in out.decode("utf-8", "replace").splitlines():
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue                    # the CLI may print non-JSON lines; only events matter
+        u = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0}
+        for ev in events:
+            if ev.get("type") == "turn.completed":
+                for k in u:
+                    u[k] += int((ev.get("usage") or {}).get(k) or 0)
+        usage = Usage(u["input_tokens"], u["output_tokens"], model)
+        failed = next((ev for ev in reversed(events) if ev.get("type") == "turn.failed"), None)
+        if failed is not None:
+            # Auth, usage limits, network: stop the run rather than burn retries (resume later).
+            raise ProviderUnavailable(f"codex exec failed: {(failed.get('error') or {}).get('message', failed)}"[:1000])
+        if proc.returncode != 0:
+            errs = [ev.get("message") for ev in events if ev.get("type") == "error"]
+            detail = errs[-1] if errs else err.decode("utf-8", "replace")[-1000:]
+            raise ProviderUnavailable(f"codex exec exit {proc.returncode}: {detail}")
+        if last is None:                    # fall back to the last agent message in the event stream
+            msgs = [ev["item"].get("text", "") for ev in events if ev.get("type") == "item.completed"
+                    and (ev.get("item") or {}).get("type") == "agent_message"]
+            last = msgs[-1] if msgs else ""
+        return last.strip(), usage          # schema validation (and re-asking) happens in LLM.structured
+
+
 class OfflineAdapter:
     """Deterministic, zero-cost stand-in for an LLM, supplied by the domain.
 
@@ -188,6 +295,8 @@ def credentials_missing(cfg: Config) -> list[str]:
         missing.append("OPENAI_API_KEY")
     if "claude-cli" in need and not shutil.which("claude"):
         missing.append("the `claude` CLI on PATH (logged in)")
+    if "codex-cli" in need and not resolve_codex(cfg.llm.codex_path):
+        missing.append("the Codex CLI (npm i -g @openai/codex, then `codex login`), or [llm] codex_path")
     return missing
 
 
@@ -230,6 +339,8 @@ class LLM:
                 self.adapters[provider] = OpenAIAdapter(self.cfg)
             elif provider == "claude-cli":
                 self.adapters[provider] = ClaudeCLIAdapter(self.cfg)
+            elif provider == "codex-cli":
+                self.adapters[provider] = CodexCLIAdapter(self.cfg)
             elif provider == "offline":
                 if self.fixture is None:
                     raise RuntimeError("provider 'offline' needs a domain with offline_fixture.py")

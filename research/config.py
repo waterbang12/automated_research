@@ -14,11 +14,14 @@ class RoleModel:
 
 @dataclass
 class LLMConfig:
-    provider: str = "anthropic"          # anthropic | openai | claude-cli | offline
+    provider: str = "anthropic"          # anthropic | openai | claude-cli | codex-cli | offline
     model: str = "claude-opus-5-5"
     effort: str = "medium"               # Anthropic output_config.effort / claude --effort
     max_tokens: int = 16000              # not settable via claude-cli; still sizes the budget reservation
-    cli_timeout_s: int = 600             # per `claude -p` call
+    cli_timeout_s: int = 600             # per `claude -p` / `codex exec` call
+    codex_path: str = ""                 # codex-cli: exe, npm .cmd shim or codex.js; default: `codex` on PATH
+    codex_reasoning_effort: str = ""     # codex-cli: passed as -c model_reasoning_effort="..." when set
+    codex_inherit_api_key: bool = False  # codex-cli: pass OPENAI_API_KEY/CODEX_API_KEY through (API billing)
     anthropic_fallbacks: bool = True     # server-side refusal fallback (beta)
     roles: dict[str, RoleModel] = field(default_factory=dict)  # researcher/coder/analyst overrides
 
@@ -94,7 +97,7 @@ def check(cfg: Config) -> None:
         raise ValueError("budget_usd and max_experiments must be >= 0")
     for role in ("researcher", "coder", "analyst"):
         rm = cfg.llm.for_role(role)
-        if rm.provider not in ("anthropic", "openai", "claude-cli", "offline"):
+        if rm.provider not in ("anthropic", "openai", "claude-cli", "codex-cli", "offline"):
             raise ValueError(f"unknown provider {rm.provider!r}")
         # Refuse to spend money on a model we cannot price: the budget would be meaningless.
         if rm.provider != "offline" and rm.model not in cfg.pricing:

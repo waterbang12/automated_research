@@ -106,3 +106,22 @@ def test_check_domain_end_to_end_in_docker(tmp_path, dirs):
                   .replace("{pred[i][:40]!r}\")", "", 1))
     rows = asyncio.run(check_domain("toy", ex, domains))
     assert ("scorer rejects malformed predictions", False) in [(label, ok) for label, ok, _ in rows]
+
+
+def test_planted_problem_has_the_stated_noise_floor(tmp_path):
+    """The agent evaluation relies on the planted data's best achievable RMSE being ~NOISE_SD."""
+    import importlib.util
+    import math
+    from pathlib import Path
+    gen_path = Path(__file__).resolve().parent.parent / "examples" / "planted_regression.py"
+    spec = importlib.util.spec_from_file_location("planted_gen", gen_path)
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    out = tmp_path / "planted.csv"
+    gen.main(str(out))
+    rows = list(csv.DictReader(open(out, encoding="utf-8")))
+    assert len(rows) == gen.N and {"x1", "x2", "x3", "x4", "group", "noise1", "y"} <= set(rows[0])
+    resid = [float(r["y"]) - gen.target(float(r["x1"]), float(r["x2"]), float(r["x3"]), float(r["x4"]), r["group"])
+             for r in rows]
+    rmse_of_truth = math.sqrt(sum(e * e for e in resid) / len(resid))
+    assert abs(rmse_of_truth - gen.NOISE_SD) < 0.03        # the true function scores ~0.5: the floor

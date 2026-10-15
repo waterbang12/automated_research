@@ -1,0 +1,230 @@
+# Capability register: what the system can do, and how we know.
+#
+# status:
+#   verified  - passing tests; and anything that touches an external system (provider.*, sandbox.*,
+#               viewer.*) has also been exercised for real (run:, manual: or doc: evidence)
+#   tested    - passing tests against fakes/fixtures only; NOT yet exercised for real
+#   proposed  - not implemented; see roadmap.yaml for plans and acceptance criteria
+#
+# evidence entries, by prefix:
+#   test:<file>::<name>   checked by tests/test_project_metadata.py
+#   file:<path>           checked by tests/test_project_metadata.py
+#   doc:<path>            checked by tests/test_project_metadata.py
+#   run:<name>            a real run; its database is local (runs/ is gitignored)
+#   commit:<sha>          git history
+#   manual:<text>         a check done by hand in a session; say what was checked
+#
+# Upgrade a status only when you add the evidence for it (AGENTS.md, "Evidence before state").
+
+as_of: "2026-10-15"
+
+implemented:
+  - id: loop.core
+    status: verified
+    summary: Unattended propose -> implement -> execute -> score -> reflect loop with a worker pool, repair attempts, resume after a crash, and stop conditions.
+    evidence:
+      - test:tests/test_controller.py::test_full_loop_records_everything_and_feeds_back
+      - test:tests/test_controller.py::test_failed_experiments_are_preserved
+      - test:tests/test_controller.py::test_resume_and_limit_expansion_needs_approval
+      - run:digits-cheap-vs-heavy
+      - run:planted
+    limits:
+      - Each experiment is one Python program on one CPU, no GPU, no network, ~2 min default timeout.
+      - One scalar metric per domain.
+
+  - id: sandbox.docker
+    status: verified
+    summary: Generated code runs only in Docker with no network, a read-only root filesystem, a non-root uid, and memory, CPU, pid and time limits.
+    evidence:
+      - test:tests/test_docker_sandbox.py::test_sandbox_restrictions
+      - test:tests/test_docker_sandbox.py::test_timeout_kills_container
+      - test:tests/test_docker_sandbox.py::test_memory_limit
+      - run:planted
+    limits:
+      - Docker is not a VM boundary; for adversarial code use gVisor or a VM.
+
+  - id: eval.integrity
+    status: verified
+    summary: The scorer, data preparation, baseline, domain spec and held-out labels are hashed at run start and re-checked before every score and on resume. Agents only see validation scores.
+    evidence:
+      - test:tests/test_controller.py::test_tampering_with_labels_is_detected
+      - test:tests/test_controller.py::test_integrity_checked_before_each_score
+      - test:tests/test_steps.py::test_checks
+
+  - id: eval.numeric_success
+    status: verified
+    summary: Success is decided only by the trusted scorer's numbers (improvement over the baseline >= min_improvement). The analyst LLM's verdict is commentary.
+    evidence:
+      - file:research/evaluator.py
+      - test:tests/test_controller.py::test_full_loop_records_everything_and_feeds_back
+    limits:
+      - The evaluator only checks "beat the baseline", not the claim a hypothesis makes (see eval.typed_claims).
+
+  - id: budget.and.approvals
+    status: verified
+    summary: Each LLM call reserves its worst-case cost before it is sent. Raising limits or enabling network needs --approve. Permission requests are recorded and never granted.
+    evidence:
+      - test:tests/test_units.py::test_budget_reserves_worst_case
+      - test:tests/test_units.py::test_concurrent_reservations_cannot_overspend
+      - test:tests/test_controller.py::test_budget_stops_run_and_keeps_completed_work
+      - test:tests/test_controller.py::test_network_access_requires_approval
+      - test:tests/test_controller.py::test_permission_requests_recorded_not_granted
+
+  - id: provider.claude_cli
+    status: verified
+    summary: Headless Claude Code (claude -p --json-schema, tools off) through the subscription login. The budget counts the CLI's API-equivalent estimate. Outages stop the run cleanly.
+    evidence:
+      - test:tests/test_adapters_http.py::test_claude_cli_adapter_args_and_usage
+      - test:tests/test_steps.py::test_provider_outage_is_an_interrupted_step_not_a_failed_experiment
+      - run:digits-demo
+      - run:digits-cheap-vs-heavy
+      - run:planted
+    limits:
+      - Needs Claude Code >= 2.1.280 for claude-opus-5-5 (2.1.160 was rejected; see log.md).
+      - The estimate is not what the subscription bills.
+
+  - id: provider.codex_cli
+    status: tested
+    summary: OpenAI Codex CLI via codex exec (read-only sandbox, ephemeral, --output-schema, --output-last-message, --json usage events). Windows npm .cmd shims are resolved to node + codex.js. Timeouts, crashes, turn.failed and cancellation are handled, and the CLI is killed.
+    evidence:
+      - test:tests/test_codex_cli.py::test_structured_call_args_usage_and_cost
+      - test:tests/test_codex_cli.py::test_malformed_output_is_reasked_and_logged
+      - test:tests/test_codex_cli.py::test_turn_failed_and_crash_stop_the_run
+      - test:tests/test_codex_cli.py::test_timeout_and_cancellation_kill_the_cli
+      - test:tests/test_codex_cli.py::test_resolve_codex_windows_shims
+      - "manual:2026-10-15 codex-cli 0.162.1 (scratch install): every flag the adapter uses is accepted, and an unauthenticated call surfaces as ProviderUnavailable(401)"
+    limits:
+      - No signed-in run yet. A successful structured response, the real turn.completed usage, and model names are unverified (questions.md Q1).
+      - The CLI reports tokens, not charges. The budget uses tokens x [pricing], which is not ChatGPT-plan billing.
+
+  - id: provider.anthropic_api
+    status: tested
+    summary: Anthropic SDK with output_config JSON schema and the server-side fallback beta.
+    evidence:
+      - test:tests/test_adapters_http.py::test_anthropic_adapter_request_and_usage
+    limits:
+      - Never run against the live API (questions.md Q2).
+
+  - id: provider.openai_api
+    status: tested
+    summary: OpenAI SDK chat completions with a strict json_schema response format.
+    evidence:
+      - test:tests/test_adapters_http.py::test_openai_adapter_request_and_usage
+    limits:
+      - Never run against the live API (questions.md Q2).
+
+  - id: provider.offline
+    status: verified
+    summary: A deterministic, credential-free fixture for the digits domain (a grid search, not AI) that exercises the whole pipeline for $0.
+    evidence:
+      - test:tests/test_units.py::test_offline_fixture_uses_history
+      - run:digits-offline
+      - run:offline-trace
+
+  - id: trace.agent_steps
+    status: verified
+    summary: Every step (session, propose, implement, execute, score, reflect, decide, stop) is recorded live, with links to its exact prompt, code version and execution. Older runs get a reconstructed trace.
+    evidence:
+      - test:tests/test_steps.py::test_trace_is_recorded_live_and_complete
+      - test:tests/test_steps.py::test_step_detail_links_exact_prompt_code_and_logs
+      - test:tests/test_steps.py::test_older_runs_get_a_reconstructed_trace
+      - run:planted
+
+  - id: trace.checks
+    status: verified
+    summary: Nine run checks - integrity, budget, LLM errors, approvals, permissions, sandbox, experiments, validation vs test, reproducibility.
+    evidence:
+      - test:tests/test_steps.py::test_checks
+      - run:smoke-claude-cli
+
+  - id: graph.derivation
+    status: verified
+    summary: A research graph (10 node types, 14 relations) derived from the records. Additive, deterministic ids, never deletes, stale marking. Supports lineage (trace back/forward), compare, next steps, and JSON/Markdown export.
+    evidence:
+      - test:tests/test_graph.py::test_lineage_queries
+      - test:tests/test_graph.py::test_persistence_is_idempotent_and_ids_stable
+      - test:tests/test_graph.py::test_manual_records_survive_and_dropped_derivations_go_stale
+      - test:tests/test_graph.py::test_backward_compatible_with_existing_databases
+      - test:tests/test_graph.py::test_narrative_and_json_export
+      - doc:docs/sample-graph/narrative.md
+      - doc:docs/sample-planted/narrative.md
+
+  - id: graph.epistemics
+    status: verified
+    summary: Branch outcomes are labelled supported, contradicted (significantly worse), not supported (inconclusive), deprioritized (benchmark ranking), invalid, or not investigated. Strength comes from an exact paired McNemar test (accuracy) or a paired t-test on per-example errors (RMSE/MSE/MAE). rules_out is never derived.
+    evidence:
+      - test:tests/test_graph.py::test_statuses_distinguish_kinds_of_negative_result
+      - test:tests/test_graph.py::test_mcnemar
+      - test:tests/test_graph.py::test_paired_t
+      - run:digits-cheap-vs-heavy
+      - run:planted
+    limits:
+      - One validation split; no multiple-testing correction.
+
+  - id: graph.decision_records
+    status: verified
+    summary: The researcher writes a decision record each round (belief, evidence used, alternatives not taken and why, assumptions, uncertainties). It becomes recorded DECISION nodes, considered branches and open questions. Each hypothesis states falsified_if.
+    evidence:
+      - test:tests/test_graph.py::test_round_decisions_are_recorded_by_the_researcher
+      - run:planted
+      - doc:docs/sample-planted/narrative.md
+    limits:
+      - Decision records are self-reports; they are not verified by the evaluator.
+
+  - id: viewer.web
+    status: verified
+    summary: Read-only local viewer. The Run page has a live timeline, filters, a checks panel, and step details with prompts, code diffs and logs. The Graph view has trace, highlight evidence, compare, trend, next steps, replay and export.
+    evidence:
+      - test:tests/test_graph.py::test_viewer_api
+      - test:tests/test_steps.py::test_run_page_api
+      - "manual:2026-10-14/15 driven in headless Chrome (puppeteer) on real and fake runs, including live mode and replay, with no console errors; there are no UI tests in the repo"
+      - doc:docs/sample-run/run-page.png
+    limits:
+      - There are no automated UI tests; only the JSON API is tested.
+
+  - id: problem.formulation
+    status: verified
+    summary: new-domain scaffolds a domain and config from a CSV (classification -> accuracy, regression -> RMSE). check-domain proves a domain is sound without an LLM.
+    evidence:
+      - test:tests/test_scaffold.py::test_new_domain_writes_a_complete_editable_domain
+      - test:tests/test_scaffold.py::test_generated_scorers
+      - test:tests/test_scaffold.py::test_check_domain_end_to_end_in_docker
+      - doc:docs/formulating-and-testing.md
+      - run:planted
+
+  - id: agent.evaluation.planted
+    status: verified
+    summary: A synthetic problem with a known best RMSE (~0.5) for measuring the agent. Claude closed 99% of the baseline-to-floor gap in 6 experiments and named the planted structure in its decision records.
+    evidence:
+      - file:examples/planted_regression.py
+      - test:tests/test_scaffold.py::test_planted_problem_has_the_stated_noise_floor
+      - doc:docs/formulating-and-testing.md
+      - run:planted
+    limits:
+      - One run is one sample; no repeated runs or comparisons across configurations yet.
+
+proposed:
+  - id: eval.typed_claims
+    summary: Hypotheses declare a claim (improvement, equivalence, ablation, direction, null), and the trusted evaluator tests that claim with paired tests on held-out data. This turns the system from an optimizer into a hypothesis tester.
+    why: Today only "beat the baseline" is verified. Structural findings (for example "x2*x3 drives y") are self-reports.
+    milestone: M5
+
+  - id: eval.noise_checks
+    summary: Repeated cross-validation or multiple seeds as a first-class experiment type, to close "is A really better than B?" open questions.
+    milestone: M6
+
+  - id: literature.method_cards
+    summary: Literature-based method selection with verified provenance (title, authors, year, DOI/arXiv, quoted passages) and cheap pilots first.
+    milestone: M7
+
+  - id: memory.retrieval
+    summary: Graph-aware retrieval and experiment prioritisation, ranked separately by relevance, evidence strength, information value and recency.
+    milestone: M8
+
+  - id: metrics.multi_objective
+    summary: More than one metric per domain (for example accuracy and runtime) with tradeoff reporting.
+    milestone: null
+
+  - id: graph.manual_editing
+    summary: A small API to record manual observations, conclusions and formal rules_out edges. Today they can only be inserted into the tables by hand.
+    milestone: null

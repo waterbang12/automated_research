@@ -1,0 +1,74 @@
+# Related papers, repositories and research systems.
+#
+# Rule: an entry is added only after its primary source (the arXiv abstract page or the
+# repository itself) has been fetched, and `verified_on` records when. Bibliographic fields
+# are copied from that source, not from memory. `relation` is our own assessment: it is
+# opinion, not a claim from the source. Unverified leads go under `to_verify`, never under
+# `entries`.
+
+entries:
+  - id: codegraph
+    kind: repository
+    title: CodeGraph
+    owner: codegraph-ai
+    url: https://github.com/codegraph-ai/CodeGraph
+    license: Apache-2.0
+    verified_on: "2026-10-15"
+    what: Builds a graph of functions, classes, imports and call chains across languages and exposes it to AI coding agents through MCP tools, IDE plugins and a persistent memory layer ("AI agents get structured code understanding instead of grepping through files").
+    relation: Conceptual reference the owner named for the Research Reasoning Graph. We model research artifacts (hypotheses, evidence, decisions) instead of code symbols, and trace conclusions instead of call chains. No code is shared.
+
+  - id: ai-scientist
+    kind: paper
+    title: "The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery"
+    authors: [Chris Lu, Cong Lu, Robert Tjarko Lange, Jakob Foerster, Jeff Clune, David Ha]
+    year: 2024
+    arxiv: "2408.06292"
+    url: https://arxiv.org/abs/2408.06292
+    verified_on: "2026-10-15"
+    what: Fully automated pipeline - idea generation, experiments, paper writing, and an automated reviewer.
+    relation: Broader scope (it writes papers). We do not generate papers. We focus on trusted evaluation, auditable traces and honest evidence labels.
+
+  - id: aide
+    kind: paper
+    title: "AIDE: AI-Driven Exploration in the Space of Code"
+    authors: [Zhengyao Jiang, Dominik Schmidt, Dhruv Srikanth, Dixing Xu, Ian Kaplan, Deniss Jacenko, Yuxiang Wu]
+    year: 2025
+    arxiv: "2502.13138"
+    url: https://arxiv.org/abs/2502.13138
+    verified_on: "2026-10-15"
+    what: An LLM agent that treats ML engineering as code optimisation and explores candidate solutions as a tree.
+    relation: The closest analogue to our loop (propose, implement, score, branch). Our lineage via parent_experiment_ids is a similar tree. We add a sandbox, integrity checks, decision records and epistemic labelling.
+
+  - id: mle-bench
+    kind: paper
+    title: "MLE-bench: Evaluating Machine Learning Agents on Machine Learning Engineering"
+    authors: [Jun Shern Chan, Neil Chowdhury, Oliver Jaffe, James Aung, Dane Sherburn, Evan Mays, Giulio Starace, Kevin Liu, Leon Maksin, Tejal Patwardhan, Lilian Weng, Aleksander Mądry]
+    year: 2024
+    arxiv: "2410.07095"
+    url: https://arxiv.org/abs/2410.07095
+    verified_on: "2026-10-15"
+    what: A benchmark of 75 Kaggle competitions for ML-engineering agents, with human leaderboard baselines.
+    relation: A possible external benchmark for this agent. Our planted problems are smaller, known-answer tests of reasoning rather than of leaderboard performance.
+
+  - id: mlagentbench
+    kind: paper
+    title: "MLAgentBench: Evaluating Language Agents on Machine Learning Experimentation"
+    authors: [Qian Huang, Jian Vora, Percy Liang, Jure Leskovec]
+    year: 2023
+    arxiv: "2310.03302"
+    url: https://arxiv.org/abs/2310.03302
+    verified_on: "2026-10-15"
+    what: 13 ML experimentation tasks in which agents read and write files, run code and inspect outputs.
+    relation: Another candidate benchmark. Its tasks assume file and shell access, which our coder deliberately lacks; it writes one sandboxed program per attempt.
+
+  - id: karpathy-autoresearch
+    kind: repository
+    title: autoresearch
+    owner: karpathy
+    url: https://github.com/karpathy/autoresearch
+    license: MIT
+    verified_on: "2026-10-15"
+    what: 'README: "AI agents running research on single-GPU nanochat training automatically". The agent edits train.py, trains for a fixed 5-minute budget, and keeps or discards the change based on val_bpb. A human steers through program.md.'
+    relation: Same keep-if-better loop on one metric, without a separate trusted scorer process, held-out test split or reasoning record. This project's name and loop shape are similar; no code is shared.
+
+to_verify: []
